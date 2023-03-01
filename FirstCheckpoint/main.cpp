@@ -19,6 +19,9 @@
 #include <string.h>
 #include <stdio.h>
 
+#define CLICKS_PER_INCH 400.0/12.0
+#define CLICKS_PER_DEGREE CLICKS_PER_INCH * 0.065
+
 /* Declared Robot Movement Methods */
 
 /* Moves the robot forward */
@@ -39,33 +42,32 @@ void rotateServo(FEHServo servo, int degrees);
 int main(void) {
     FEHMotor leftMotor(FEHMotor::Motor0, 9.0);
     FEHMotor rightMotor(FEHMotor::Motor1, 9.0);
-    DigitalEncoder rightEncoder(FEHIO::P0_0);
-    DigitalEncoder leftEncoder(FEHIO::P0_1);
+    DigitalEncoder leftEncoder(FEHIO::P0_0);
+    DigitalEncoder rightEncoder(FEHIO::P0_1);
     FEHServo frontServo(FEHServo::Servo0);
     FEHServo rearServo(FEHServo::Servo1);
-    AnalogInputPin cds(FEHIO::P1_0);
+    AnalogInputPin cds(FEHIO::P1_1);
 
-    while (cds.Value() < 0.5) {
+    leftEncoder.ResetCounts();
+    rightEncoder.ResetCounts();
+
+    while (cds.Value() > 0.5) {
         LCD.Write("~[,,_,,]:3");
         LCD.Clear();
     }
-
-    moveForward(leftMotor, rightMotor, leftEncoder, rightEncoder, (260 / 6) * 2, 25);
-    turnLeft(leftMotor, rightMotor, leftEncoder, rightEncoder, (260 / 6) * 20, 25);
-    moveForward(leftMotor, rightMotor, leftEncoder, rightEncoder, (260 / 6) * 37, 25);
-    
-    turnLeft();
-    moveForward();
-    turnRight();
-    moveForward();
-    moveBackward();
-    turnRight();
-    moveForward();
-    turnLeft();
-    moveForward();
-    moveRight();
-    moveForward();
-    
+    moveForward(leftMotor, rightMotor, leftEncoder, rightEncoder, (int)(CLICKS_PER_INCH * 5.0), 25);
+    turnLeft(leftMotor, rightMotor, leftEncoder, rightEncoder, (int)(CLICKS_PER_DEGREE * 42.0), 20);
+    moveForward(leftMotor, rightMotor, leftEncoder, rightEncoder, (int)(CLICKS_PER_INCH * 34.0), 25);
+    turnLeft(leftMotor, rightMotor, leftEncoder, rightEncoder, (int)(CLICKS_PER_DEGREE * 90.0), 20);
+    moveForward(leftMotor, rightMotor, leftEncoder, rightEncoder, (int)(CLICKS_PER_INCH * 8.0), 25);
+    turnRight(leftMotor, rightMotor, leftEncoder, rightEncoder, (int)(CLICKS_PER_DEGREE * 100.0), 20);
+    moveForward(leftMotor, rightMotor, leftEncoder, rightEncoder, (int)(CLICKS_PER_INCH * 16.0), 25);
+    moveBackward(leftMotor, rightMotor, leftEncoder, rightEncoder, (int)(CLICKS_PER_INCH * 16.0), 25);
+    turnLeft(leftMotor, rightMotor, leftEncoder, rightEncoder, (int)(CLICKS_PER_DEGREE * 90.0), 20);
+    moveBackward(leftMotor, rightMotor, leftEncoder, rightEncoder, (int)(CLICKS_PER_INCH * 20), 25);
+    moveForward(leftMotor, rightMotor, leftEncoder, rightEncoder, (int)(CLICKS_PER_INCH * 5.0), 25);
+    turnRight(leftMotor, rightMotor, leftEncoder, rightEncoder, (int)(CLICKS_PER_DEGREE * 100.0), 20);
+    moveBackward(leftMotor, rightMotor, leftEncoder, rightEncoder, (int)(CLICKS_PER_INCH * 35.0), 25);
     leftMotor.Stop();
     rightMotor.Stop();
 }
