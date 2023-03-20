@@ -77,6 +77,7 @@ int main(void) {
     Sleep(2.0);
     if (cds.Value() < 0.7) {
         LCD.Write("THE COLOR IS RED");
+        /* Touch the button */
         turnLeft(leftMotor, rightMotor, leftEncoder, rightEncoder, (int)(CLICKS_PER_DEGREE * 45.0), 20);
         moveBackward(leftMotor, rightMotor, leftEncoder, rightEncoder, (int)(CLICKS_PER_INCH * 8.0), 25);
         turnLeft(leftMotor, rightMotor, leftEncoder, rightEncoder, (int)(CLICKS_PER_DEGREE * 75.0), 20);
@@ -90,6 +91,7 @@ int main(void) {
         /* Turns right towards the rightmost wall*/
     } else {
         LCD.Write("THE COLOR IS BLUE");
+        /* Touch the button */
         turnLeft(leftMotor, rightMotor, leftEncoder, rightEncoder, (int)(CLICKS_PER_DEGREE * 45.0), 20);
         moveBackward(leftMotor, rightMotor, leftEncoder, rightEncoder, (int)(CLICKS_PER_INCH * 3.0), 25);
         turnLeft(leftMotor, rightMotor, leftEncoder, rightEncoder, (int)(CLICKS_PER_DEGREE * 75.0), 20);
