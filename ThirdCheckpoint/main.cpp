@@ -2,7 +2,7 @@
 /*      Third checkpoint        */
 /*     OSU FEH Spring 2023      */
 /*           Team A             */
-/*          03/22/23            */
+/*          03/30/23            */
 /********************************/
 
 /* Include Preprocessor Directives */
@@ -26,11 +26,19 @@
 
 //DISTANCE VALUES FOR THE THIRD CHECKPOINT
 
-#define START_TO_READY_FOR_TURN 18
-#define LEFT_TURN 45
-#define TURN_TO_IN_FRONT_OF_LEVERS 8
-#define NINETY_DEGREES 95
-#define INTO_LEVERS 5
+#define START_TO_READY_FOR_TURN 20
+#define LEFT_TURN 48
+#define TURN_TO_IN_FRONT_OF_LEVERS 1
+#define NINETY_DEGREES 100
+#define INTO_LEVERS 7
+#define MOVE_BACK 5
+#define BACK 3
+
+//LEVER POSITIONS
+#define ARM_DOWN 1
+#define ARM_UP 60
+#define FLIP_DOWN 20
+#define FLIP_UP 30
 
 // SERVO VALUES
 #define SERVO_MAX 2390
@@ -59,14 +67,15 @@ int main(void) {
 
     }*/
 
-    leverServo.SetDegree(180);
+    
 
     /* Waits until robot reads a value from the starting light */
     while (cds.Value() > 0.5) {
-
         LCD.Write("Waiting to start");
         LCD.Clear();
     }
+
+    leverServo.SetDegree(ARM_DOWN);
 
     //move forward diagonally
     drive.Straight(START_TO_READY_FOR_TURN);
@@ -76,22 +85,23 @@ int main(void) {
 
     // move forward until in front of the levers
     drive.Straight(TURN_TO_IN_FRONT_OF_LEVERS);
+    leverServo.SetDegree(ARM_UP);
 
     // turn towards the levers
     drive.TurnLeft(NINETY_DEGREES);
 
-    // move into the levers
-    //moveForward(leftMotor, rightMotor, leftEncoder, rightEncoder, (int)(CLICKS_PER_INCH * INTO_LEVERS), 25);
+    // move back
+    //drive.Back(1);
 
     //flip down (20 deg down)
-    leverServo.SetDegree(160);
+    leverServo.SetDegree(FLIP_DOWN);
     Sleep(1000);
     
     // go back
-    drive.Back(INTO_LEVERS);
+    drive.Back(MOVE_BACK);
 
     // flip arm down
-    leverServo.SetDegree(90);
+    leverServo.SetDegree(ARM_DOWN);
 
     // wait 5 seconds
     Sleep(5000);
@@ -100,11 +110,11 @@ int main(void) {
     drive.Straight(INTO_LEVERS);
 
     // flip levers up
-    leverServo.SetDegree(70);
+    leverServo.SetDegree(FLIP_UP);
     Sleep(1000);
-    leverServo.SetDegree(90);
 
     // move back
-    drive.Back(INTO_LEVERS);
+    drive.Back(MOVE_BACK);
+    leverServo.SetDegree(ARM_DOWN);
 }
 
