@@ -54,6 +54,7 @@ int main(void) {
 
     /* Waits until robot reads a value from the starting light */
     while (cds.Value() > 0.5) {
+        // (just random writing)
         LCD.Write("~[,,_,,]:3");
         LCD.Clear();
     }
