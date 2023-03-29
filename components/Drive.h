@@ -90,4 +90,14 @@ public:
 
         Stop();
     }
+
+    // Reset the current drive power. Defaults to 25.
+    void setDrivePercent(int percent) {
+        drivePower = percent;
+    }
+
+    // Reset the current drive power. Defaults to 25.
+    void setTurnPercent(int percent) {
+        turnPower = percent;
+    }
 };
