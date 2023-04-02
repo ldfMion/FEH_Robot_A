@@ -1,51 +1,43 @@
-# Components Documentation
+# README
 
-- [Drive](#Drive)
+This code is for a client written in C++ that controls a robot's movements and interacts with the FEH RPS module. The client includes a `Drive` class that provides methods for driving forward and backward a certain number of inches, turning left and right by a certain number of degrees, and other helper functions.
 
-## Drive
+## Requirements
 
-This code defines a `Drive` class that is used to control the movement of a robot using two motors and two digital encoders. The class provides four methods to move the robot: `Straight`, `Back`, `TurnRight`, and `TurnLeft`. 
+* `FEHMotor.h`
+* `FEHIO.h`
+* `FEHRPS.h`
+* `FEHUtility.h`
+* `math.h`
 
-### Class Variables
+## Constants
 
-- `leftMotor`: an instance of `FEHMotor` class used to control the left motor of the robot.
-- `rightMotor`: an instance of `FEHMotor` class used to control the right motor of the robot.
-- `leftEncoder`: an instance of `DigitalEncoder` class used to count the number of clicks of the left wheel encoder.
-- `rightEncoder`: an instance of `DigitalEncoder` class used to count the number of clicks of the right wheel encoder.
-- `drivePower`: an integer value that specifies the percentage of power to be applied to both motors when moving straight or backward. The default value is 25.
-- `turnPower`: an integer value that specifies the percentage of power to be applied to both motors when turning. The default value is 20.
+* `CLICKS_PER_INCH`: the number of encoder clicks that correspond to one inch of movement
+* `CLICKS_PER_DEGREE`: the number of encoder clicks that correspond to one degree of rotation
+* `RPS_ANGLE_ERROR`: the allowed error in degrees for RPS heading measurements
+* `RPS_DIST_ERROR`: the allowed error in inches for RPS position measurements
 
-### Class Methods
+## `Drive` class
 
-#### `Drive` constructor
+### Properties
 
-The constructor of the `Drive` class takes four parameters:
+* `leftMotor`: a `FEHMotor` object representing the left motor
+* `rightMotor`: a `FEHMotor` object representing the right motor
+* `drivePower`: an integer representing the power percentage for driving forward/backward
+* `turnPower`: an integer representing the power percentage for turning left/right
+* `leftEncoder`: a `DigitalEncoder` object representing the left encoder
+* `rightEncoder`: a `DigitalEncoder` object representing the right encoder
 
-- `leftPort`: a `FEHMotorPort` value that specifies the port of the left motor.
-- `rightPort`: a `FEHMotorPort` value that specifies the port of the right motor.
-- `leftEncoderPort`: a `FEHIOPin` value that specifies the pin of the left wheel encoder.
-- `rightEncoderPort`: a `FEHIOPin` value that specifies the pin of the right wheel encoder.
+### Methods
 
-#### `Straight` method
-
-The `Straight` method takes an integer parameter `inches` that specifies the distance in inches to move straight. The method sets the motors to move forward, and the robot will move straight until both wheel encoders have counted the required number of clicks.
-
-#### `Back` method
-
-The `Back` method takes an integer parameter `inches` that specifies the distance in inches to move backward. The method sets the motors to move backward, and the robot will move backward until both wheel encoders have counted the required number of clicks.
-
-#### `TurnRight` method
-
-The `TurnRight` method takes an integer parameter `degrees` that specifies the number of degrees to turn right. The method sets the motors to turn right, and the robot will turn right until both wheel encoders have counted the required number of clicks.
-
-#### `TurnLeft` method
-
-The `TurnLeft` method takes an integer parameter `degrees` that specifies the number of degrees to turn left. The method sets the motors to turn left, and the robot will turn left until both wheel encoders have counted the required number of clicks.
-
-#### `ResetEncoderCounts` method
-
-The `ResetEncoderCounts` method is a private method that resets the counts of both wheel encoders.
-
-#### `Stop` method
-
-The `Stop` method is a private method that stops both motors.
+* `Drive::Drive()`: constructor that initializes the `Drive` object and the RPS module
+* `Drive::Forward()`: drives the robot forward at the `drivePower` percentage
+* `Drive::Forward(int inches)`: drives the robot forward for a specified number of inches
+* `Drive::Back(int inches)`: drives the robot backward for a specified number of inches
+* `Drive::TurnRight(int degrees)`: turns the robot right by a specified number of degrees
+* `Drive::TurnLeft(int degrees)`: turns the robot left by a specified number of degrees
+* `Drive::GetPosition()`: gets the current position of the robot using the RPS module
+* `Drive::radiansToDegrees(float radians)`: converts radians to degrees
+* `Drive::calcSmallestAngleDifference(float desired, float current)`: calculates the smallest angle difference between two angles
+* `Drive::GetAngleFromDeltas(float deltaX, float deltaY)`: gets the angle of rotation from two x and y differences
+* `Drive::Dist(Position p1, Position p2)`: gets the distance between two positions
