@@ -1,3 +1,4 @@
+#include <string>
 
 #include <FEHMotor.h>
 #include <FEHIO.h>
@@ -246,7 +247,7 @@ public:
      */
     void TurnTo(Position desired)
     {
-
+        LCD.Clear();
         // vars for the current position in the rps
         Position currPos = GetPosition();
 
@@ -256,11 +257,14 @@ public:
         // desired angle from 0 to 360
         float desiredAngle = GetAngleFromDeltas(deltaY, deltaX);
 
+        LCD.Write("Desired angle");
         LCD.WriteLine(desiredAngle);
+        LCD.Write("Current angle");
         LCD.WriteLine(currPos.heading);
 
         // shortest angle the robot needs to turn
         float angleDiff = calcSmallestAngleDifference(desiredAngle, currPos.heading);
+        LCD.Write("Turning");
         LCD.WriteLine(angleDiff);
 
         // if the difference is close enough the robots stops turning (base case)
