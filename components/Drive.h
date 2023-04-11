@@ -1,9 +1,8 @@
-#include <string>
-
 #include <FEHMotor.h>
 #include <FEHIO.h>
 #include <FEHRPS.h>
 #include <FEHUtility.h>
+#include <FEHLCD.h>
 
 #include <math.h>
 // #include <algorithm>
@@ -11,6 +10,9 @@
 //*constants for movement
 #define CLICKS_PER_INCH 400.0 / 12.0
 #define CLICKS_PER_DEGREE CLICKS_PER_INCH * 0.065
+
+#define DEFAULT_DRIVE_POWER 25
+#define DEFAULT_TURN_POWER 20
 
 //* constants for RPS
 #define RPS_ANGLE_ERROR 5 // angle error in degrees
@@ -29,8 +31,8 @@ private:
     FEHMotor leftMotor;
     FEHMotor rightMotor;
 
-    int drivePower = 25;
-    int turnPower = 20;
+    int drivePower = DEFAULT_DRIVE_POWER;
+    int turnPower = DEFAULT_TURN_POWER;
 
     DigitalEncoder leftEncoder;
     DigitalEncoder rightEncoder;
@@ -49,32 +51,7 @@ private:
 
     //* RPS HELPER FUNCTIONS
 
-    /**
-     * Gets the current x and y coordinates and heading
-     */
-    Position GetPosition()
-    {
-
-        // vars for the current position in the rps
-        float currX;
-        float currY;
-        float heading;
-
-        // set the vars when RPS returns valid values
-        do
-        {
-            LCD.Clear();
-            LCD.WriteLine("Waiting for signal");
-            Sleep(20);
-            currX = RPS.X();
-            currY = RPS.Y();
-            heading = RPS.Heading();
-        } while (currX < 0 || currY < 0 || heading < 0);
-
-        return {
-            currX,
-            currY};
-    }
+    // put get position back here
 
     //*MATH HELPER FUNCTIONS
 
@@ -99,6 +76,7 @@ private:
             diff = fmod(diff, 180);
         }
         
+        return diff;
     }
 
     /**
@@ -110,21 +88,23 @@ private:
     {
 
         // arctan ∆y/∆x
-        float angle = radiansToDegrees(atan(deltaY / deltaX));
+        float angle = radiansToDegrees(atan2f(deltaY, deltaX));
 
+        /*
         if (deltaX < 0)
-        {
-            // Q2 and Q3
+        {   
+            if(deltaY < 0){ //Q3
+                angle += 180;
+            }
             angle += 180;
         }
-        else
+        else if (deltaY < 0)
         {
-            // Q1 and Q4 (Q1 overcorrects for the following subtraction)
+            
             angle += 360;
-        }
-        // correction for the course (the course is with 0 pointing to the top,
-        // unlike the unit circle, which is what we get from the atan function)
-        return angle - 90;
+        }*/
+        
+        return fmod((angle + 360), 360);
     }
 
     float Dist(Position p1, Position p2)
@@ -218,6 +198,8 @@ public:
     }
     void Turn(float angleDiff){
 
+        angleDiff *= 0.7;
+
         if (angleDiff > 0)
         {
             TurnLeft(angleDiff);
@@ -228,16 +210,74 @@ public:
         }
     }
 
-    // Reset the current drive power. Defaults to 25.
+    // Reset the current drive power 
     void SetDrivePercent(int percent)
     {
         drivePower = percent;
     }
 
-    // Reset the current drive power. Defaults to 25.
+    // Reset the current drive power
     void SetTurnPercent(int percent)
     {
         turnPower = percent;
+    }
+
+    /**
+     * Gets the current x and y coordinates and heading
+     */
+    Position GetPosition()
+    {
+
+        // vars for the current position in the rps
+        float currX;
+        float currY;
+        float currHeading;
+
+        // set the vars when RPS returns valid values
+        do
+        {
+            Sleep(20);
+            currX = RPS.X();
+            currY = RPS.Y();
+            currHeading = RPS.Heading();
+            LCD.Clear();
+            LCD.WriteLine("Waiting for signal");
+            LCD.Write("x: ");
+            LCD.WriteLine(currX);
+            LCD.Write("y: ");
+            LCD.WriteLine(currY);
+            LCD.Write("heading: ");
+            LCD.WriteLine(currHeading);
+        } while (currX < 0 || currY < 0 || currHeading < 0);
+
+        return {
+            currX,
+            currY,
+            currHeading
+        };
+    }
+
+    void checkInfo(Position desired){
+
+        LCD.Clear();
+        // vars for the current position in the rps
+        Position currPos = GetPosition();
+
+        float deltaX = desired.x - currPos.x;
+        float deltaY = desired.y - currPos.y;
+
+        // desired angle from 0 to 360
+        float desiredAngle = GetAngleFromDeltas(deltaY, deltaX);
+
+        LCD.Write("Desired angle");
+        LCD.WriteLine(desiredAngle);
+        LCD.Write("Current angle");
+        LCD.WriteLine(currPos.heading);
+
+        // shortest angle the robot needs to turn
+        float angleDiff = calcSmallestAngleDifference(desiredAngle, currPos.heading);
+        LCD.Write("Angle diff: ");
+        LCD.WriteLine(angleDiff);
     }
 
     /**
@@ -264,7 +304,7 @@ public:
 
         // shortest angle the robot needs to turn
         float angleDiff = calcSmallestAngleDifference(desiredAngle, currPos.heading);
-        LCD.Write("Turning");
+        LCD.Write("Angle diff: ");
         LCD.WriteLine(angleDiff);
 
         // if the difference is close enough the robots stops turning (base case)
@@ -273,7 +313,7 @@ public:
             return;
         }
 
-        // robot turns to a different direction based on which is faster
+        // robot turns the shortest way towards the desired angle
         Turn(angleDiff);
 
         // recursive call
@@ -306,8 +346,10 @@ public:
      */
     void GoToWithCorrection(Position desired)
     {
+        LCD.Clear();
+        LCD.WriteLine("Restarting");
         // just so the robot doesnt crash
-        SetDrivePercent(10);
+        //SetDrivePercent(10);
 
         // vars for the current position in the rps
         Position currPos = GetPosition();
@@ -319,6 +361,8 @@ public:
         if (dist < RPS_DIST_ERROR)
         {
             Stop();
+            //SetDrivePercent(DEFAULT_DRIVE_POWER);
+            LCD.WriteLine("Reached point");
             return;
         }
 
@@ -330,6 +374,8 @@ public:
 
         // shortest angle the robot needs to turn
         float angleDiff = calcSmallestAngleDifference(desiredAngle, currPos.heading);
+        LCD.Write("Angle difference: ");
+        LCD.WriteLine(angleDiff);
 
         // turns only if the angle difference is too big
         if (abs(angleDiff) < RPS_ANGLE_ERROR)
