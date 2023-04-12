@@ -30,8 +30,8 @@ AnalogInputPin cds(FEHIO::P1_1);
 Drive drive(FEHMotor::Motor0, FEHMotor::Motor1, FEHIO::P0_0, FEHIO::P0_1); 
 
 // SERVO VALUES
-#define SERVO_MAX 2390
-#define SERVO_MIN 500
+#define SERVO_MAX 2500
+#define SERVO_MIN 550
 
 /**
  * to be called from the start position. Completes the ticket task.
@@ -43,58 +43,68 @@ void ticket() {
     /* Moves forward to position */
     drive.Forward(2);
     /* Turns right to position */
-    drive.turnRight(90);
+    drive.TurnRight(90);
     /* Moves forward to position */
     drive.Forward(4);
     /* Turns left to position, facing right-most ramp */
-    drive.turnLeft(38);
+    drive.TurnLeft(38);
     /* Moves forward up the ramp, stopping in front of the passport mechanism */
     drive.Forward(30);
     // Turn left to face the light
-    drive.turnLeft(55);
+    drive.TurnLeft(50);
+    leverServo.SetDegree(15);
     // Drive on top of the light
-    drive.Forward(20);
+    drive.Forward(24);
 
     LCD.Clear();
     Sleep(2.0);
     if (cds.Value() < 0.7) {
         LCD.Write("THE COLOR IS RED");
         /* Touch the button */
-        drive.turnLeft(45);
+        drive.TurnLeft(45);
 
         // drive to the button
         drive.Back(8);
+
         // Face the button
-        drive.turnLeft(90);
+        drive.TurnLeft(90);
         
         // Actually press the button
-        drive.Back(5);
+        drive.BackTimed(2.5);
 
+        leverServo.SetDegree(90);
         // Drive back to the luggage
-        drive.Forward(23);
+        drive.ForwardTimed(6.5);
 
         // Back into the passport wall
-        drive.turnRight(90);
-        drive.moveBack(18);
+        drive.TurnRight(90);
+        leverServo.SetDegree(15);
+        drive.BackTimed(5.0);
+
     } else {
         LCD.Write("THE COLOR IS BLUE");
         /* Touch the button */
-        drive.turnLeft(45);
+        drive.TurnLeft(45);
 
         // drive to the button
-        drive.Back(3);
-        // Face the button
-        drive.turnLeft(90);
-        
-        // Actually press the button
         drive.Back(5);
 
+        // Face the button
+        drive.TurnLeft(90);
+        
+        // Actually press the button
+        drive.BackTimed(2.5);
+
+        leverServo.SetDegree(90);
+
         // Drive back to the luggage
-        drive.Forward(23);
+        drive.ForwardTimed(6.5);
 
         // Back into the passport wall
-        drive.turnRight(90);
-        drive.moveBack(18);
+        
+        drive.TurnRight(90);
+        leverServo.SetDegree(15);
+        drive.BackTimed(5.0);
     }
 }
 
@@ -106,7 +116,7 @@ int passport() {
     /* Moves forward to position, parellel to passport */
     drive.Forward(9.5);
     /* Turns right to face passport, bar aligned with lever */
-    drive.turnRight(95);
+    drive.TurnRight(95);
     /* Move bar up while moving forward slowly until lever reaches top */
     drive.Forward(2);
     /* Moves bar up */
@@ -116,9 +126,9 @@ int passport() {
     /* Move backward a little */
     drive.Back(2);
     /* Turn left 90 degrees */
-    drive.turnLeft(95);
+    drive.TurnLeft(95);
     /* Move bar down */
-    leverServo.SetDegree(5);
+    leverServo.SetDegree(15);
 }
 
 /**
@@ -128,14 +138,19 @@ int passport() {
 int luggage() {
 
     // Drive to be aligned with the luggage and the ramp.
-    drive.Forward(18);
+    drive.Forward(17);
 
     // Face the ramp
-    drive.turnLeft(70);
+    drive.TurnLeft(90);
+
+    drive.setDrivePercent(35);
+
+    // Stop angled on the ramp, then continue down to give luggage time to drop.
+    drive.Forward(5);
+    drive.Back(1);
+    drive.Forward(1);
 
     drive.setDrivePercent(10);
-    // Stop angled on the ramp, then continue down to give luggage time to drop.
-    drive.Forward(3);
     Sleep(1.0);
     drive.Forward(5);
 
@@ -148,28 +163,30 @@ int luggage() {
 */
 int levers() {
 
+    drive.Forward(3);
+
     // Put arm up
     leverServo.SetDegree(60);
 
     // Drive up to the lever
-    drive.Forward(1);
+    drive.Forward(3);
     
     // Drop arm down
     leverServo.SetDegree(20);
 
     // Drive back
-    drive.Back(1);
+    drive.Back(3);
 
     // Wait the required time.
     Sleep(5.0);
 
     // Drive back forward, and lift the arm
-    drive.Forward(1);
+    drive.Forward(3);
     leverServo.SetDegree(60);
 
     // Drive back and lower the servo.
-    drive.Back(1);
-    leverServo.SetDegree(5);
+    drive.Back(3);
+    leverServo.SetDegree(15);
 }
 
 /**
@@ -178,32 +195,38 @@ int levers() {
 */
 int finalButton() {
 
+    drive.Forward(1.5);
+
     // face the button
-    drive.turnLeft(60);
+    drive.TurnLeft(65);
 
     // drive into it
     drive.Forward(25);
 }
 
 int main(void) {
-    /* FEHMotor leftMotor(FEHMotor::Motor0, 9.0);
-    FEHMotor rightMotor(FEHMotor::Motor1, 9.0); */
-    //DigitalEncoder leftEncoder(FEHIO::P0_0);
-    //DigitalEncoder rightEncoder(FEHIO::P0_1);
-    
 
     //sets servo values
     leverServo.SetMin(SERVO_MIN);
     leverServo.SetMax(SERVO_MAX);
 
-    
 
+    LCD.Write("Waiting to start");
     /* Waits until robot reads a value from the starting light */
-    while (cds.Value() > 0.5) {
-        LCD.Write("Waiting to start");
-        LCD.Clear();
+    while (cds.Value() > 0.6) {
+        
     }
+    
+    LCD.Clear();
+
+    ticket();
+    passport();
+    luggage();
+    levers();
+    finalButton();
 
     
+    LCD.Clear();
+    LCD.Write("Done!");
 }
 
