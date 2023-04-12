@@ -27,11 +27,11 @@
 FEHServo leverServo(FEHServo::Servo0);
 AnalogInputPin cds(FEHIO::P1_1);
 
-Drive drive(FEHMotor::Motor0, FEHMotor::Motor1, FEHIO::P0_0, FEHIO::P0_1); 
-
 // SERVO VALUES
 #define SERVO_MAX 2500
 #define SERVO_MIN 550
+
+Drive drive(FEHMotor::Motor0, FEHMotor::Motor1, FEHIO::P0_0, FEHIO::P0_1); 
 
 /**
  * to be called from the start position. Completes the ticket task.
@@ -114,7 +114,7 @@ void ticket() {
  * to be called from the passport wall. Completes the passport task.
  * End Position: aligned with the passport task, facing west.
 */
-int passport() {
+void passport() {
     /* Moves forward to position, parellel to passport */
     drive.Forward(9.5);
     /* Turns right to face passport, bar aligned with lever */
@@ -137,7 +137,7 @@ int passport() {
  * to be called from being aligned with the passport task. Completes the luggage task.
  * End Position: at the bottom of the left ramp, facing south.
 */
-int luggage() {
+void luggage() {
 
     // Drive to be aligned with the luggage and the ramp.
     drive.Forward(17);
@@ -163,7 +163,7 @@ int luggage() {
  * to be called from the bottom of the left ramp facing south. Completes the lever task.
  * End Position: same place as start.
 */
-int levers() {
+void levers() {
 
     drive.Forward(3);
 
@@ -195,7 +195,7 @@ int levers() {
  * to be called from the bottom of the left ramp facing south. Completes the final button task.
  * End Position: at the final button
 */
-int finalButton() {
+void finalButton() {
 
     drive.Forward(1.5);
 
@@ -207,6 +207,8 @@ int finalButton() {
 }
 
 int main(void) {
+
+    drive.initialize();
 
     //sets servo values
     leverServo.SetMin(SERVO_MIN);
@@ -231,4 +233,3 @@ int main(void) {
     LCD.Clear();
     LCD.Write("Done!");
 }
-

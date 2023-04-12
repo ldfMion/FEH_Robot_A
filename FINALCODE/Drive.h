@@ -10,7 +10,6 @@
 //*constants for movement
 #define CLICKS_PER_INCH 400.0 / 12.0
 #define CLICKS_PER_DEGREE CLICKS_PER_INCH * 0.065
-#define M_PI 3.14
 
 #define DEFAULT_DRIVE_POWER 25
 #define DEFAULT_TURN_POWER 20
@@ -108,6 +107,8 @@ public:
                                                                                                                                                   leftEncoder(leftEncoderPort),
                                                                                                                                                   rightEncoder(rightEncoderPort)
     {
+    }
+    void initialize(){
         ResetEncoderCounts();
         RPS.InitializeTouchMenu();
         LCD.Clear();
