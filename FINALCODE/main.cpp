@@ -130,9 +130,9 @@ void Ticket()
 void Passport()
 {
     /* Moves forward to position, parellel to passport */
-    drive.Forward(9.5);
+    drive.Forward(9.1);
     /* Turns right to face passport, bar aligned with lever */
-    drive.TurnRight(95);
+    drive.TurnRight(90);
     /* Move bar up while moving forward slowly until lever reaches top */
     drive.Forward(2);
     /* Moves bar up */
@@ -140,9 +140,9 @@ void Passport()
     /* Move bar up while moving forward slowly until lever reaches top */
     drive.Forward(3);
     /* Move backward a little */
-    drive.Back(2);
+    drive.Back(2.5);
     /* Turn left 90 degrees */
-    drive.TurnLeft(95);
+    drive.TurnLeft(90);
     /* Move bar down */
     leverServo.SetDegree(15);
 }
@@ -155,7 +155,7 @@ void Luggage()
 {
 
     // Drive to be aligned with the luggage and the ramp.
-    drive.Forward(17);
+    drive.Forward(17.2);
 
     // Face the ramp
     drive.TurnLeft(90);
@@ -163,13 +163,18 @@ void Luggage()
     drive.SetDrivePercent(35);
 
     // Stop angled on the ramp, then continue down to give luggage time to drop.
-    drive.Forward(5);
+    drive.Forward(6);
+    drive.Back(1);
+    drive.Forward(1);
+
+    // Stop angled on the ramp, then continue down to give luggage time to drop.
+    drive.Forward(2);
     drive.Back(1);
     drive.Forward(1);
 
     drive.SetDrivePercent(10);
     Sleep(1.0);
-    drive.Forward(5);
+    drive.Forward(3);
 
     drive.SetDrivePercent(25);
 }
@@ -181,13 +186,11 @@ void Luggage()
 void Levers()
 {
 
-    drive.Forward(3);
+    // Drive up to the lever
+    drive.Forward(5);
 
     // Put arm up
-    leverServo.SetDegree(60);
-
-    // Drive up to the lever
-    drive.Forward(3);
+    leverServo.SetDegree(100);
 
     // Drop arm down
     leverServo.SetDegree(20);
@@ -199,12 +202,14 @@ void Levers()
     Sleep(5.0);
 
     // Drive back forward, and lift the arm
+    leverServo.SetDegree(100);
     drive.Forward(3);
-    leverServo.SetDegree(60);
+    
 
     // Drive back and lower the servo.
-    drive.Back(3);
     leverServo.SetDegree(15);
+    drive.Back(3);
+    
 }
 
 /**
