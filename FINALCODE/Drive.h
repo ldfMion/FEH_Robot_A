@@ -38,12 +38,18 @@ private:
     DigitalEncoder leftEncoder;
     DigitalEncoder rightEncoder;
 
+    /**
+     * Resets encoder counts
+    */
     void ResetEncoderCounts()
     {
         leftEncoder.ResetCounts();
         rightEncoder.ResetCounts();
     }
 
+    /**
+     * Stops both motors
+    */
     void Stop()
     {
         leftMotor.Stop();
@@ -52,10 +58,45 @@ private:
 
     //* RPS HELPER FUNCTIONS
 
-    // put get position back here
+    /**
+     * Gets the current x and y coordinates and heading
+     */
+    Position GetPosition()
+    {
+
+        // vars for the current position in the rps
+        float currX;
+        float currY;
+        float currHeading;
+
+        // set the vars when RPS returns valid values
+        do
+        {
+            Sleep(20);
+            currX = RPS.X();
+            currY = RPS.Y();
+            currHeading = RPS.Heading();
+            LCD.Clear();
+            LCD.WriteLine("Waiting for signal");
+            LCD.Write("x: ");
+            LCD.WriteLine(currX);
+            LCD.Write("y: ");
+            LCD.WriteLine(currY);
+            LCD.Write("heading: ");
+            LCD.WriteLine(currHeading);
+        } while (currX < 0 || currY < 0 || currHeading < 0);
+
+        return {
+            currX,
+            currY,
+            currHeading};
+    }
 
     //*MATH HELPER FUNCTIONS
 
+    /**
+     * Converts radians to degrees
+    */
     float radiansToDegrees(float radians)
     {
         float degrees = radians * (180.0 / M_PI);
@@ -67,7 +108,7 @@ private:
      * absolute value (to find out which direction the robot should turn)
      * Positive for clockwise and negative for counterclockwise
      */
-    float calcSmallestAngleDifference(float desired, float current)
+    float CalcSmallestAngleDifference(float desired, float current)
     {
         float diff = desired - current;
         if (diff > 180)
@@ -84,7 +125,6 @@ private:
     /**
      * get the angle from 0 to 360 deg based on the difference between
      * the x coordinates and the difference between the y coordinates
-     * (WITH 0 BEING POINTING UP AS PER THE TRACK)
      */
     float GetAngleFromDeltas(float deltaX, float deltaY)
     {
@@ -95,6 +135,32 @@ private:
         return angle < 0 ? angle + 360 : angle;
     }
 
+    /**
+     * Angle difference based on a desired and a current coordinate point
+    */
+    float GetAngleFromPoints(Position desired, Position current){
+        float deltaX = desired.x - current.x;
+        float deltaY = desired.y - current.y;
+
+        // desired angle from 0 to 360
+        float desiredAngle = GetAngleFromDeltas(deltaX, deltaY);
+
+        LCD.Write("Desired angle");
+        LCD.WriteLine(desiredAngle);
+        LCD.Write("Current angle");
+        LCD.WriteLine(current.heading);
+
+        // shortest angle the robot needs to turn
+        float angleDiff = CalcSmallestAngleDifference(desiredAngle, current.heading);
+        LCD.Write("Angle diff: ");
+        LCD.WriteLine(angleDiff);
+
+        return angleDiff;
+    }
+
+    /**
+     * Returns the distance between points in the coordinate plane
+    */
     float Dist(Position p1, Position p2)
     {
         double dx = p1.x - p2.x;
@@ -135,54 +201,67 @@ public:
 
         int clicks = (int)(CLICKS_PER_INCH * inches);
 
-        while (leftEncoder.Counts() <= clicks && rightEncoder.Counts() <= clicks)
-        {
-        };
+        while (leftEncoder.Counts() <= clicks && rightEncoder.Counts() <= clicks);
 
         Stop();
     }
 
+    /**
+     * Moves the robot forward for a defined amount of time
+    */
     void ForwardTimed(float time) {
         float t_now;
         t_now = TimeNow();
 
-        leftMotor.SetPercent(drivePower);
-        rightMotor.SetPercent(-drivePower);
+        Forward();
 
         while(TimeNow()-t_now<time);
 
         Stop();
     }
 
-    void BackTimed(float time) {
-        float t_now;
-        t_now = TimeNow();
-
+    /**
+     * Just turns the motors on forward wthout stopping
+     */
+    void Back(){
         leftMotor.SetPercent(-drivePower);
         rightMotor.SetPercent(drivePower);
-
-        while(TimeNow()-t_now<time);
-
-        Stop();
     }
 
-
+    /**
+     * Drives back for a certain amount of inches
+     * Method overload
+     */
     void Back(int inches)
     {
         ResetEncoderCounts();
 
-        leftMotor.SetPercent(-drivePower);
-        rightMotor.SetPercent(drivePower);
+        Back();
 
         int clicks = (int)(CLICKS_PER_INCH * inches);
 
-        while (leftEncoder.Counts() <= clicks && rightEncoder.Counts() <= clicks)
-        {
-        };
+        while (leftEncoder.Counts() <= clicks && rightEncoder.Counts() <= clicks);
 
         Stop();
     }
 
+    /**
+     * Moves the robot forward for a defined amount of time
+    */
+    void BackTimed(float time) {
+        float t_now;
+        t_now = TimeNow();
+
+        Back();
+
+        while(TimeNow()-t_now<time);
+
+        Stop();
+    }
+
+    /**
+     * Turns right a defined amount of degrees
+    */
     void TurnRight(int degrees)
     {
         ResetEncoderCounts();
@@ -191,9 +270,7 @@ public:
 
         int clicks = (int)(CLICKS_PER_DEGREE * degrees);
 
-        while (leftEncoder.Counts() <= clicks && rightEncoder.Counts() <= clicks)
-        {
-        };
+        while (leftEncoder.Counts() <= clicks && rightEncoder.Counts() <= clicks);
 
         Stop();
     }
@@ -206,73 +283,49 @@ public:
 
         int clicks = (int)(CLICKS_PER_DEGREE * degrees);
 
-        while (leftEncoder.Counts() <= clicks && rightEncoder.Counts() <= clicks)
-        {
-        };
+        while (leftEncoder.Counts() <= clicks && rightEncoder.Counts() <= clicks);
 
         Stop();
     }
-    void Turn(float angleDiff)
+
+    /**
+     * Turns the robot a certain angle
+     * @param angle positive for counterclockwise and negative for clockwise
+    */
+    void Turn(float angle)
     {
 
-        angleDiff *= 0.6;
+        angle *= 0.6;
 
-        if (angleDiff > 0)
+        if (angle > 0)
         {
-            TurnLeft(angleDiff);
+            TurnLeft(angle);
         }
         else
         {
-            TurnRight(abs(angleDiff));
+            TurnRight(abs(angle));
         }
     }
 
-    // Reset the current drive power
+    /**
+     * Updates drivePower
+    */
     void SetDrivePercent(int percent)
     {
         drivePower = percent;
     }
 
-    // Reset the current drive power
+    /**
+     * Updates turnPower
+    */
     void SetTurnPercent(int percent)
     {
         turnPower = percent;
     }
 
     /**
-     * Gets the current x and y coordinates and heading
-     */
-    Position GetPosition()
-    {
-
-        // vars for the current position in the rps
-        float currX;
-        float currY;
-        float currHeading;
-
-        // set the vars when RPS returns valid values
-        do
-        {
-            Sleep(20);
-            currX = RPS.X();
-            currY = RPS.Y();
-            currHeading = RPS.Heading();
-            LCD.Clear();
-            LCD.WriteLine("Waiting for signal");
-            LCD.Write("x: ");
-            LCD.WriteLine(currX);
-            LCD.Write("y: ");
-            LCD.WriteLine(currY);
-            LCD.Write("heading: ");
-            LCD.WriteLine(currHeading);
-        } while (currX < 0 || currY < 0 || currHeading < 0);
-
-        return {
-            currX,
-            currY,
-            currHeading};
-    }
-
+     * Checks RPS info for testing
+    */
     void checkInfo(Position desired)
     {
 
@@ -280,21 +333,8 @@ public:
         // vars for the current position in the rps
         Position currPos = GetPosition();
 
-        float deltaX = desired.x - currPos.x;
-        float deltaY = desired.y - currPos.y;
-
-        // desired angle from 0 to 360
-        float desiredAngle = GetAngleFromDeltas(deltaX, deltaY);
-
-        LCD.Write("Desired angle");
-        LCD.WriteLine(desiredAngle);
-        LCD.Write("Current angle");
-        LCD.WriteLine(currPos.heading);
-
-        // shortest angle the robot needs to turn
-        float angleDiff = calcSmallestAngleDifference(desiredAngle, currPos.heading);
-        LCD.Write("Angle diff: ");
-        LCD.WriteLine(angleDiff);
+        float angleDiff = GetAngleFromPoints(desired, currPos);
+        
     }
 
     /**
@@ -308,21 +348,7 @@ public:
         // vars for the current position in the rps
         Position currPos = GetPosition();
 
-        float deltaX = desired.x - currPos.x;
-        float deltaY = desired.y - currPos.y;
-
-        // desired angle from 0 to 360
-        float desiredAngle = GetAngleFromDeltas(deltaX, deltaY);
-
-        LCD.Write("Desired angle");
-        LCD.WriteLine(desiredAngle);
-        LCD.Write("Current angle");
-        LCD.WriteLine(currPos.heading);
-
-        // shortest angle the robot needs to turn
-        float angleDiff = calcSmallestAngleDifference(desiredAngle, currPos.heading);
-        LCD.Write("Angle diff: ");
-        LCD.WriteLine(angleDiff);
+        float angleDiff = GetAngleFromPoints(desired, currPos);
 
         // if the difference is close enough the robots stops turning (base case)
         if (abs(angleDiff) < RPS_ANGLE_ERROR)
@@ -377,16 +403,7 @@ public:
             return;
         }
 
-        float deltaX = desired.x - currPos.x;
-        float deltaY = desired.y - currPos.y;
-
-        // desired angle from 0 to 360
-        float desiredAngle = GetAngleFromDeltas(deltaX, deltaY);
-
-        // shortest angle the robot needs to turn
-        float angleDiff = calcSmallestAngleDifference(desiredAngle, currPos.heading);
-        LCD.Write("Angle difference: ");
-        LCD.WriteLine(angleDiff);
+        float angleDiff = GetAngleFromPoints(desired, currPos);
 
         // turns only if the angle difference is too big
         if (abs(angleDiff) < RPS_ANGLE_ERROR)
