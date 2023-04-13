@@ -15,8 +15,9 @@
 #define DEFAULT_TURN_POWER 20
 
 //* constants for RPS
-#define RPS_ANGLE_ERROR 2 // angle error in degrees
-#define RPS_DIST_ERROR 3  // distance error in inches
+#define RPS_ANGLE_ERROR 1 // angle error in degrees
+#define RPS_DIST_ERROR 1  // distance error in inches
+#define CDS_CELL_DISP 1.5
 
 struct Position
 {
@@ -214,7 +215,7 @@ public:
     void Turn(float angleDiff)
     {
 
-        angleDiff *= 0.7;
+        angleDiff *= 0.6;
 
         if (angleDiff > 0)
         {
@@ -346,7 +347,7 @@ public:
     void DriveTo(Position desired)
     {
         Position currPos = GetPosition();
-        float dist = Dist(currPos, desired);
+        float dist = Dist(currPos, desired) - CDS_CELL_DISP;
         Forward(dist);
     }
 
@@ -362,10 +363,6 @@ public:
      */
     void GoToWithCorrection(Position desired)
     {
-        LCD.Clear();
-        LCD.WriteLine("Restarting");
-        // just so the robot doesnt crash
-        // SetDrivePercent(10);
 
         // vars for the current position in the rps
         Position currPos = GetPosition();
@@ -377,8 +374,6 @@ public:
         if (dist < RPS_DIST_ERROR)
         {
             Stop();
-            // SetDrivePercent(DEFAULT_DRIVE_POWER);
-            LCD.WriteLine("Reached point");
             return;
         }
 
@@ -397,7 +392,11 @@ public:
         if (abs(angleDiff) < RPS_ANGLE_ERROR)
         {
             // drive Forward if the angle is correct
-            Forward();
+            if(dist > 5){
+                Forward(3);
+            } else {
+                Forward();
+            }
         }
         else
         {
