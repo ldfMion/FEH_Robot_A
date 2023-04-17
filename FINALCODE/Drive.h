@@ -210,12 +210,11 @@ public:
      * Moves the robot forward for a defined amount of time
     */
     void ForwardTimed(float time) {
-        float t_now;
-        t_now = TimeNow();
+        float tNow = TimeNow();
 
         Forward();
 
-        while(TimeNow()-t_now<time);
+        while(TimeNow()-tNow<time);
 
         Stop();
     }
@@ -432,10 +431,10 @@ public:
         if (abs(angleDiff) < RPS_ANGLE_ERROR)
         {
             // drive Forward if the angle is correct
-            if(dist > 7){
-                Forward(5);
+            if(dist > 5){
+                Forward(dist/2);
             } else {
-                Forward();
+                Forward(dist);
             }
         }
         else
