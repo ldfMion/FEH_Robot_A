@@ -27,13 +27,19 @@
 FEHServo leverServo(FEHServo::Servo0);
 AnalogInputPin cds(FEHIO::P1_1);
 
+
 // SERVO VALUES
 #define SERVO_MAX 2500
 #define SERVO_MIN 550
 
 #define LIGHT_COORDINATES \
     {                     \
-        11, 59.4          \
+        12, 60.4          \
+    }
+
+#define LEFTRAMP_COORDINATES \
+    {                     \
+        7.5, 43          \
     }
 
 Drive drive(FEHMotor::Motor0, FEHMotor::Motor1, FEHIO::P0_0, FEHIO::P0_1);
@@ -91,7 +97,8 @@ void Ticket()
         drive.ForwardTimed(6.5);
 
         // Back into the passport wall
-        drive.TurnRight(90);
+        drive.Back(1);
+        drive.TurnRight(100);
         leverServo.SetDegree(15);
         drive.BackTimed(5.0);
     }
@@ -117,7 +124,9 @@ void Ticket()
 
         // Back into the passport wall
 
-        drive.TurnRight(90);
+        drive.Back(1);
+
+        drive.TurnRight(100);
         leverServo.SetDegree(15);
         drive.BackTimed(5.0);
     }
@@ -130,11 +139,11 @@ void Ticket()
 void Passport()
 {
     /* Moves forward to position, parellel to passport */
-    drive.Forward(9.1);
+    drive.Forward(7.5);
     /* Turns right to face passport, bar aligned with lever */
     drive.TurnRight(90);
     /* Move bar up while moving forward slowly until lever reaches top */
-    drive.Forward(2);
+    drive.Forward(1);
     /* Moves bar up */
     leverServo.SetDegree(75);
     /* Move bar up while moving forward slowly until lever reaches top */
@@ -142,7 +151,7 @@ void Passport()
     /* Move backward a little */
     drive.Back(2.5);
     /* Turn left 90 degrees */
-    drive.TurnLeft(90);
+    drive.TurnLeft(85);
     /* Move bar down */
     leverServo.SetDegree(15);
 }
@@ -155,22 +164,26 @@ void Luggage()
 {
 
     // Drive to be aligned with the luggage and the ramp.
-    drive.Forward(17.2);
-
-    // Face the ramp
+    drive.ForwardTimed(6.5);
+    drive.Back(2);
     drive.TurnLeft(90);
+    
+    Position leftRamp = LEFTRAMP_COORDINATES;
+    drive.GoToWithCorrection(leftRamp);
+
+    drive.Forward(1.5);
 
     drive.SetDrivePercent(35);
 
     // Stop angled on the ramp, then continue down to give luggage time to drop.
-    drive.Forward(6);
     drive.Back(1);
     drive.Forward(1);
+    Sleep(2.0);
 
     // Stop angled on the ramp, then continue down to give luggage time to drop.
-    drive.Forward(2);
     drive.Back(1);
     drive.Forward(1);
+    Sleep(2.0);
 
     drive.SetDrivePercent(10);
     Sleep(1.0);
@@ -187,10 +200,12 @@ void Levers()
 {
 
     // Drive up to the lever
-    drive.Forward(5);
-
+    drive.Forward(2);
     // Put arm up
     leverServo.SetDegree(100);
+    drive.Forward(3);
+
+    
 
     // Drop arm down
     leverServo.SetDegree(20);
@@ -202,8 +217,10 @@ void Levers()
     Sleep(5.0);
 
     // Drive back forward, and lift the arm
-    leverServo.SetDegree(100);
     drive.Forward(3);
+    leverServo.SetDegree(100);
+    Sleep(1.0);
+    
     
 
     // Drive back and lower the servo.
@@ -225,7 +242,7 @@ void FinalButton()
     drive.TurnLeft(65);
 
     // drive into it
-    drive.Forward(25);
+    drive.ForwardTimed(15.0);
 }
 
 /* Waits until robot reads a value from the starting light */

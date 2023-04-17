@@ -264,6 +264,9 @@ public:
     */
     void TurnRight(int degrees)
     {
+
+        degrees *= 0.8;
+    
         ResetEncoderCounts();
         leftMotor.SetPercent(turnPower);
         rightMotor.SetPercent(turnPower);
@@ -277,6 +280,7 @@ public:
 
     void TurnLeft(int degrees)
     {
+
         ResetEncoderCounts();
         leftMotor.SetPercent(-turnPower);
         rightMotor.SetPercent(-turnPower);
@@ -294,8 +298,7 @@ public:
     */
     void Turn(float angle)
     {
-
-        angle *= 0.6;
+        angle *= .6;
 
         if (angle > 0)
         {
@@ -363,6 +366,26 @@ public:
         TurnTo(desired);
     }
 
+    void TurnTo(float desiredHeading){
+        Position currPos = GetPosition();
+        float currHeading = currPos.heading;
+
+        float angleDiff = CalcSmallestAngleDifference(desiredHeading, currHeading);
+
+        // if the difference is close enough the robots stops turning (base case)
+        if (abs(angleDiff) < RPS_ANGLE_ERROR)
+        {
+            return;
+        }
+
+        // robot turns the shortest way towards the desired angle
+        Turn(angleDiff);
+
+        // recursive call
+        TurnTo(desiredHeading);
+
+    }
+
     /**
      * Drive the robot in a Forward line to the desired point
      *
@@ -409,8 +432,8 @@ public:
         if (abs(angleDiff) < RPS_ANGLE_ERROR)
         {
             // drive Forward if the angle is correct
-            if(dist > 5){
-                Forward(3);
+            if(dist > 7){
+                Forward(5);
             } else {
                 Forward();
             }
