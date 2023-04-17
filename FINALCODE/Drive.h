@@ -17,7 +17,7 @@
 //* constants for RPS
 #define RPS_ANGLE_ERROR 1 // angle error in degrees
 #define RPS_DIST_ERROR 1  // distance error in inches
-#define CDS_CELL_DISP 1.5
+#define CDS_CELL_DISP 0//3.5
 
 struct Position
 {
@@ -217,6 +217,16 @@ public:
         while(TimeNow()-tNow<time);
 
         Stop();
+    }
+
+    /**
+     * Wiggles the robot back and force to help square against walls.
+     */
+    void Wiggle() {
+        TurnLeft(5);
+        TurnRight(5);
+        TurnLeft(5);
+        TurnRight(5);
     }
 
     /**

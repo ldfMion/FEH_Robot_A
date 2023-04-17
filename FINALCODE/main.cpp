@@ -32,17 +32,21 @@ AnalogInputPin cds(FEHIO::P1_1);
 #define SERVO_MAX 2500
 #define SERVO_MIN 550
 
+#define COURSE_Y 72
 #define LIGHT_COORDINATES \
     {                     \
-        12, 60.4          \
+        10.5, COURSE_Y-11.5          \
     }
 
 #define LEFTRAMP_COORDINATES \
     {                     \
-        7.5, 43          \
+        7, 45          \
     }
 
 Drive drive(FEHMotor::Motor0, FEHMotor::Motor1, FEHIO::P0_0, FEHIO::P0_1);
+
+
+
 
 /**
  * to be called from the start position. Completes the ticket task.
@@ -71,6 +75,7 @@ void Ticket()
     // Turn left to face the light
     Position light = LIGHT_COORDINATES;
     drive.GoToWithCorrection(light);
+    drive.TurnTo(135);
 
     // Drive on top of the light
     // drive.Forward(24);
@@ -90,7 +95,9 @@ void Ticket()
         drive.TurnLeft(90);
 
         // Actually press the button
-        drive.BackTimed(2.5);
+        drive.BackTimed(2);
+        drive.Wiggle();
+        drive.BackTimed(1);
 
         leverServo.SetDegree(90);
         // Drive back to the luggage
@@ -98,9 +105,11 @@ void Ticket()
 
         // Back into the passport wall
         drive.Back(1);
-        drive.TurnRight(100);
+        drive.TurnRight(105);
         leverServo.SetDegree(15);
-        drive.BackTimed(5.0);
+        drive.BackTimed(3.0);
+        drive.Wiggle();
+        drive.BackTimed(1.0);
     }
     else
     {
@@ -115,7 +124,9 @@ void Ticket()
         drive.TurnLeft(90);
 
         // Actually press the button
-        drive.BackTimed(2.5);
+        drive.BackTimed(2);
+        drive.Wiggle();
+        drive.BackTimed(1);
 
         leverServo.SetDegree(90);
 
@@ -126,9 +137,11 @@ void Ticket()
 
         drive.Back(1);
 
-        drive.TurnRight(100);
+        drive.TurnRight(105);
         leverServo.SetDegree(15);
-        drive.BackTimed(5.0);
+        drive.BackTimed(4.0);
+        drive.Wiggle();
+        drive.BackTimed(1.0);
     }
 }
 
@@ -139,19 +152,20 @@ void Ticket()
 void Passport()
 {
     /* Moves forward to position, parellel to passport */
-    drive.Forward(7.5);
+    drive.Forward(7.8);
     /* Turns right to face passport, bar aligned with lever */
     drive.TurnRight(90);
     /* Move bar up while moving forward slowly until lever reaches top */
     drive.Forward(1);
     /* Moves bar up */
-    leverServo.SetDegree(75);
+    leverServo.SetDegree(90);
     /* Move bar up while moving forward slowly until lever reaches top */
-    drive.Forward(3);
+    //drive.Forward(3);
+    drive.ForwardTimed(1.0);
     /* Move backward a little */
     drive.Back(2.5);
     /* Turn left 90 degrees */
-    drive.TurnLeft(85);
+    drive.TurnLeft(80);
     /* Move bar down */
     leverServo.SetDegree(15);
 }
@@ -162,34 +176,41 @@ void Passport()
  */
 void Luggage()
 {
+    drive.SetDrivePercent(40);
 
     // Drive to be aligned with the luggage and the ramp.
-    drive.ForwardTimed(6.5);
+    drive.ForwardTimed(3.5);
+
+    drive.SetDrivePercent(25);
+
     drive.Back(2);
     drive.TurnLeft(90);
+    drive.Back(2);
     
     Position leftRamp = LEFTRAMP_COORDINATES;
     drive.GoToWithCorrection(leftRamp);
 
-    drive.Forward(1.5);
+    drive.TurnTo(270);
+    drive.TurnTo(270);
 
     drive.SetDrivePercent(35);
 
-    // Stop angled on the ramp, then continue down to give luggage time to drop.
-    drive.Back(1);
-    drive.Forward(1);
-    Sleep(2.0);
+    drive.Forward(2);
+    Sleep(.5);
+    for (int i = 0; i < 8; i++) {
+        drive.Forward(.4);
+        Sleep(.5);
+    }
+    
+    drive.Forward(2);
 
-    // Stop angled on the ramp, then continue down to give luggage time to drop.
-    drive.Back(1);
-    drive.Forward(1);
-    Sleep(2.0);
-
-    drive.SetDrivePercent(10);
-    Sleep(1.0);
-    drive.Forward(3);
 
     drive.SetDrivePercent(25);
+
+    Sleep(3.0);
+    drive.Forward(3);
+
+    
 }
 
 /**
@@ -200,9 +221,10 @@ void Levers()
 {
 
     // Drive up to the lever
-    drive.Forward(2);
+    drive.Back(1);
     // Put arm up
     leverServo.SetDegree(100);
+    Sleep(2.0);
     drive.Forward(3);
 
     
@@ -239,7 +261,7 @@ void FinalButton()
     drive.Forward(1.5);
 
     // face the button
-    drive.TurnLeft(65);
+    drive.TurnLeft(60);
 
     // drive into it
     drive.ForwardTimed(15.0);
