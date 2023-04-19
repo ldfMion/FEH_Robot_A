@@ -19,14 +19,10 @@
 #include <string.h>
 #include <stdio.h>
 
-#include <Drive.h>
-
-#define CLICKS_PER_INCH 400.0 / 12.0
-#define CLICKS_PER_DEGREE CLICKS_PER_INCH * 0.065
+#include "Drive.h"
 
 FEHServo leverServo(FEHServo::Servo0);
 AnalogInputPin cds(FEHIO::P1_1);
-
 
 // SERVO VALUES
 #define SERVO_MAX 2500
@@ -44,39 +40,46 @@ Drive drive(FEHMotor::Motor0, FEHMotor::Motor1, FEHIO::P0_0, FEHIO::P0_1);
 
 
 
-
+Position GetCoordinate(){
+    LCD.Clear();
+    LCD.WriteLine("Getting point");
+    //Sleep(5000);
+    Position point = drive.GetPosition();
+    LCD.WriteLine("Point registered");
+    //Sleep(5000);
+    return point;
+}
+bool lightIsRed(){
+    return (cds.Value() < 0.7);
+}
 /**
  * to be called from the start position. Completes the ticket task.
  * End Position: backed up against passport wall.
  */
-void Ticket()
+void Ticket(Position lightCoordinates)
 {
-
-    
     // Turn left to face the light
-    Position light = LIGHT_COORDINATES;
-    drive.GoToWithCorrection(light);
-    drive.TurnTo(135);
+    //Position light = LIGHT_COORDINATES;
+    drive.GoToWithCorrection(lightCoordinates);
 
     // Drive on top of the light
     // drive.Forward(24);
 
     LCD.Clear();
     Sleep(2.0);
-    if (cds.Value() < 0.7)
+    bool isRed = lightIsRed();
+    drive.TurnTo(135);
+    if(isRed)
     {
         LCD.Write("THE COLOR IS RED");
         /* Touch the button */
         drive.TurnLeft(45);
 
         // drive to the button
-        drive.Back(8);
+        drive.Back(9.5);
 
         // Face the button
         drive.TurnLeft(90);
-
-        
-
     }
     else
     {
@@ -89,13 +92,12 @@ void Ticket()
 
         // Face the button
         drive.TurnLeft(90);
-
-        
     }
     // Actually press the button
     drive.BackTimed(2);
     drive.Wiggle();
     drive.BackTimed(1);
+    
 }
 
 /**
@@ -113,8 +115,7 @@ void Passport()
     /* Moves forward to position */
     drive.Forward(4);
     /* Turns left to position, facing right-most ramp */
-    drive.TurnLeft(38);
-    leverServo.SetDegree(15);
+    drive.TurnTo(90);
     /* Moves forward up the ramp, stopping in front of the passport mechanism */
     drive.SetDrivePercent(50);
     drive.Forward(30);
@@ -137,11 +138,13 @@ void Passport()
     drive.Forward(1);
     /* Moves bar up */
     leverServo.SetDegree(90);
-    drive.ForwardTimed(2.0);
+    //move into the passport
+    drive.ForwardTimed(1.0);
     // move bar down
+    drive.Back(4);
     leverServo.SetDegree(15);
     /* Move backward a little */
-    drive.Back(4);
+    
 }
 
 /**
@@ -150,10 +153,41 @@ void Passport()
  */
 void Luggage()
 {
+    drive.ForwardTimed(6.5);
+    drive.Back(1);
+    drive.TurnLeft(90);
+    drive.BackTimed(5);
+    drive.Wiggle();
+    drive.Forward(1);
     Position leftRamp = LEFTRAMP_COORDINATES;
     drive.GoToWithCorrection(leftRamp);
 
-    drive.TurnTo(270);
+    /*
+    drive.TurnTo(260);
+    //drive.TurnTo(270);
+
+    drive.SetDrivePercent(70);
+    drive.Forward(2);
+    drive.SetDrivePercent(25);    
+    Sleep(2);
+    
+    //----
+    //whack the luggage
+    drive.SetDrivePercent(70);
+    drive.ForwardTimed(0.2);
+    drive.SetDrivePercent(25);
+     //----
+    
+    drive.SetDrivePercent(70);
+    for (int i = 0; i < 5; i++) {
+        drive.Forward(0.6);
+        Sleep(.5);
+    }
+    drive.SetDrivePercent(25);
+
+    drive.Forward(7);
+    */
+
     drive.TurnTo(270);
 
     drive.SetDrivePercent(35);
@@ -170,8 +204,9 @@ void Luggage()
 
     drive.SetDrivePercent(25);
 
+    leverServo.SetDegree(50);
     Sleep(3.0);
-    drive.Forward(3);
+    drive.Forward(4);
 }
 
 /**
@@ -187,8 +222,6 @@ void Levers()
     leverServo.SetDegree(100);
     Sleep(2.0);
     drive.Forward(3);
-
-    
 
     // Drop arm down
     leverServo.SetDegree(20);
@@ -246,12 +279,14 @@ int main(void)
     leverServo.SetMin(SERVO_MIN);
     leverServo.SetMax(SERVO_MAX);
 
+    Position lightCoordinates = GetCoordinate();
+
     WaitToStart();
 
     LCD.Clear();
 
     Passport();
-    Ticket();
+    Ticket(lightCoordinates);
     Luggage();
     Levers();
     FinalButton();
