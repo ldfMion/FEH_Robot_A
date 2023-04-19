@@ -115,7 +115,8 @@ void Passport()
     /* Moves forward to position */
     drive.Forward(4);
     /* Turns left to position, facing right-most ramp */
-    drive.TurnTo(90);
+    //drive.TurnTo(90);
+    drive.TurnLeft(44);
     /* Moves forward up the ramp, stopping in front of the passport mechanism */
     drive.SetDrivePercent(50);
     drive.Forward(30);
@@ -133,17 +134,16 @@ void Passport()
     /* Moves forward to position, parallel to passport */
     drive.Forward(7.8);
     /* Turns right to face passport, bar aligned with lever */
-    drive.TurnRight(90);
+    drive.TurnRight(93);
     /* Move bar up while moving forward slowly until lever reaches top */
     drive.Forward(1);
     /* Moves bar up */
-    leverServo.SetDegree(90);
+    leverServo.SetDegree(80);
     //move into the passport
-    drive.ForwardTimed(1.0);
+    drive.ForwardTimed(1.5);
     // move bar down
     drive.Back(4);
     leverServo.SetDegree(15);
-    /* Move backward a little */
     
 }
 
@@ -153,14 +153,17 @@ void Passport()
  */
 void Luggage()
 {
+    leverServo.SetDegree(120);
     drive.ForwardTimed(6.5);
-    drive.Back(1);
-    drive.TurnLeft(90);
+    drive.Back(6);
+    drive.TurnTo(0);
     drive.BackTimed(5);
     drive.Wiggle();
-    drive.Forward(1);
+    drive.BackTimed(1);
+    drive.Forward(5);
+    drive.TurnRight(95);
     Position leftRamp = LEFTRAMP_COORDINATES;
-    drive.GoToWithCorrection(leftRamp);
+    drive.GoToNoTurn(leftRamp);
 
     /*
     drive.TurnTo(260);
@@ -188,25 +191,21 @@ void Luggage()
     drive.Forward(7);
     */
 
-    drive.TurnTo(270);
-
     drive.SetDrivePercent(35);
 
-    drive.Forward(2);
+    drive.Forward(3);
     Sleep(.5);
-    for (int i = 0; i < 8; i++) {
-        drive.Forward(.4);
+    for (int i = 0; i < 5; i++) {
+        drive.Forward(1.1);
+        Sleep(.5);
+        drive.Back(.5);
         Sleep(.5);
     }
     
-    drive.Forward(2);
-
 
     drive.SetDrivePercent(25);
 
-    leverServo.SetDegree(50);
-    Sleep(3.0);
-    drive.Forward(4);
+    drive.Forward(2);
 }
 
 /**
@@ -216,12 +215,9 @@ void Luggage()
 void Levers()
 {
 
-    // Drive up to the lever
-    drive.Back(1);
-    // Put arm up
-    leverServo.SetDegree(100);
-    Sleep(2.0);
-    drive.Forward(3);
+    // Drive to lever
+    //drive.Forward(2);
+    drive.TurnLeft(3);
 
     // Drop arm down
     leverServo.SetDegree(20);
@@ -255,10 +251,17 @@ void FinalButton()
     drive.Forward(1.5);
 
     // face the button
-    drive.TurnLeft(60);
+    drive.TurnLeft(65);
 
-    // drive into it
-    drive.ForwardTimed(15.0);
+    // drive half way
+    drive.ForwardTimed(2.0);
+
+    // 180
+    drive.TurnLeft(175);
+    drive.SetDrivePercent(40);
+
+    // hit the button
+    drive.BackTimed(10.0);
 }
 
 /* Waits until robot reads a value from the starting light */

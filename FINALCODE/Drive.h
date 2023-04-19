@@ -15,7 +15,7 @@
 #define DEFAULT_TURN_POWER 20
 
 //* constants for RPS
-#define RPS_ANGLE_ERROR 1 // angle error in degrees
+#define RPS_ANGLE_ERROR .5 // angle error in degrees
 #define RPS_DIST_ERROR 1  // distance error in inches
 #define CDS_CELL_DISP 0//3.5
 
@@ -413,6 +413,10 @@ public:
     void GoTo(Position desired)
     {
         TurnTo(desired);
+        DriveTo(desired);
+    }
+
+    void GoToNoTurn(Position desired) {
         DriveTo(desired);
     }
 
