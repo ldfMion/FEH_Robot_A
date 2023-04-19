@@ -19,69 +19,70 @@
 #include <string.h>
 #include <stdio.h>
 
-#include <Drive.h>
-
-#define CLICKS_PER_INCH 400.0/12.0
-#define CLICKS_PER_DEGREE CLICKS_PER_INCH * 0.065
+#include "Drive.h"
 
 FEHServo leverServo(FEHServo::Servo0);
 AnalogInputPin cds(FEHIO::P1_1);
-
-Drive drive(FEHMotor::Motor0, FEHMotor::Motor1, FEHIO::P0_0, FEHIO::P0_1); 
 
 // SERVO VALUES
 #define SERVO_MAX 2500
 #define SERVO_MIN 550
 
+#define COURSE_Y 72
+#define LIGHT_COORDINATES {13.3, 60.0}
+
+#define LEFTRAMP_COORDINATES \
+    {                     \
+        7, 45          \
+    }
+
+Drive drive(FEHMotor::Motor0, FEHMotor::Motor1, FEHIO::P0_0, FEHIO::P0_1);
+
+
+
+Position GetCoordinate(){
+    LCD.Clear();
+    LCD.WriteLine("Getting point");
+    //Sleep(5000);
+    Position point = drive.GetPosition();
+    LCD.WriteLine("Point registered");
+    //Sleep(5000);
+    return point;
+}
+bool lightIsRed(){
+    return (cds.Value() < 0.7);
+}
 /**
  * to be called from the start position. Completes the ticket task.
  * End Position: backed up against passport wall.
-*/
-void ticket() {
-    /* Moves bar up */
-    leverServo.SetDegree(75);
-    /* Moves forward to position */
-    drive.Forward(2);
-    /* Turns right to position */
-    drive.TurnRight(90);
-    /* Moves forward to position */
-    drive.Forward(4);
-    /* Turns left to position, facing right-most ramp */
-    drive.TurnLeft(38);
-    /* Moves forward up the ramp, stopping in front of the passport mechanism */
-    drive.Forward(30);
+ */
+void Ticket(Position lightCoordinates)
+{
     // Turn left to face the light
-    drive.TurnLeft(50);
-    leverServo.SetDegree(15);
+    //Position light = LIGHT_COORDINATES;
+    drive.GoToWithCorrection(lightCoordinates);
+
     // Drive on top of the light
-    drive.Forward(24);
+    // drive.Forward(24);
 
     LCD.Clear();
     Sleep(2.0);
-    if (cds.Value() < 0.7) {
+    bool isRed = lightIsRed();
+    drive.TurnTo(135);
+    if(isRed)
+    {
         LCD.Write("THE COLOR IS RED");
         /* Touch the button */
         drive.TurnLeft(45);
 
         // drive to the button
-        drive.Back(8);
+        drive.Back(9.5);
 
         // Face the button
         drive.TurnLeft(90);
-        
-        // Actually press the button
-        drive.BackTimed(2.5);
-
-        leverServo.SetDegree(90);
-        // Drive back to the luggage
-        drive.ForwardTimed(6.5);
-
-        // Back into the passport wall
-        drive.TurnRight(90);
-        leverServo.SetDegree(15);
-        drive.BackTimed(5.0);
-
-    } else {
+    }
+    else
+    {
         LCD.Write("THE COLOR IS BLUE");
         /* Touch the button */
         drive.TurnLeft(45);
@@ -91,86 +92,137 @@ void ticket() {
 
         // Face the button
         drive.TurnLeft(90);
-        
-        // Actually press the button
-        drive.BackTimed(2.5);
-
-        leverServo.SetDegree(90);
-
-        // Drive back to the luggage
-        drive.ForwardTimed(6.5);
-
-        // Back into the passport wall
-        
-        drive.TurnRight(90);
-        leverServo.SetDegree(15);
-        drive.BackTimed(5.0);
     }
+    // Actually press the button
+    drive.BackTimed(2);
+    drive.Wiggle();
+    drive.BackTimed(1);
+    
 }
 
 /**
  * to be called from the passport wall. Completes the passport task.
  * End Position: aligned with the passport task, facing west.
-*/
-int passport() {
-    /* Moves forward to position, parellel to passport */
-    drive.Forward(9.5);
-    /* Turns right to face passport, bar aligned with lever */
-    drive.TurnRight(95);
-    /* Move bar up while moving forward slowly until lever reaches top */
+ */
+void Passport()
+{   
+    /* Moves forward to position */
     drive.Forward(2);
-    /* Moves bar up */
+    //lever up
     leverServo.SetDegree(75);
-    /* Move bar up while moving forward slowly until lever reaches top */
-    drive.Forward(3);
-    /* Move backward a little */
-    drive.Back(2);
-    /* Turn left 90 degrees */
-    drive.TurnLeft(95);
-    /* Move bar down */
+    /* Turns right to position */
+    drive.TurnRight(90);
+    /* Moves forward to position */
+    drive.Forward(4);
+    /* Turns left to position, facing right-most ramp */
+    drive.TurnTo(90);
+    /* Moves forward up the ramp, stopping in front of the passport mechanism */
+    drive.SetDrivePercent(50);
+    drive.Forward(30);
+    drive.SetDrivePercent(25);
+
     leverServo.SetDegree(15);
+
+    // Back into the passport wall
+    drive.TurnLeft(110);
+    leverServo.SetDegree(15);
+    drive.BackTimed(1.5);
+    drive.Wiggle();
+    drive.BackTimed(0.5);
+
+    /* Moves forward to position, parallel to passport */
+    drive.Forward(7.8);
+    /* Turns right to face passport, bar aligned with lever */
+    drive.TurnRight(90);
+    /* Move bar up while moving forward slowly until lever reaches top */
+    drive.Forward(1);
+    /* Moves bar up */
+    leverServo.SetDegree(90);
+    //move into the passport
+    drive.ForwardTimed(1.0);
+    // move bar down
+    drive.Back(4);
+    leverServo.SetDegree(15);
+    /* Move backward a little */
+    
 }
 
 /**
  * to be called from being aligned with the passport task. Completes the luggage task.
  * End Position: at the bottom of the left ramp, facing south.
-*/
-int luggage() {
-
-    // Drive to be aligned with the luggage and the ramp.
-    drive.Forward(17);
-
-    // Face the ramp
-    drive.TurnLeft(90);
-
-    drive.setDrivePercent(35);
-
-    // Stop angled on the ramp, then continue down to give luggage time to drop.
-    drive.Forward(5);
+ */
+void Luggage()
+{
+    drive.ForwardTimed(6.5);
     drive.Back(1);
+    drive.TurnLeft(90);
+    drive.BackTimed(5);
+    drive.Wiggle();
     drive.Forward(1);
+    Position leftRamp = LEFTRAMP_COORDINATES;
+    drive.GoToWithCorrection(leftRamp);
 
-    drive.setDrivePercent(10);
-    Sleep(1.0);
-    drive.Forward(5);
+    /*
+    drive.TurnTo(260);
+    //drive.TurnTo(270);
 
-    drive.setDrivePercent(25);
+    drive.SetDrivePercent(70);
+    drive.Forward(2);
+    drive.SetDrivePercent(25);    
+    Sleep(2);
+    
+    //----
+    //whack the luggage
+    drive.SetDrivePercent(70);
+    drive.ForwardTimed(0.2);
+    drive.SetDrivePercent(25);
+     //----
+    
+    drive.SetDrivePercent(70);
+    for (int i = 0; i < 5; i++) {
+        drive.Forward(0.6);
+        Sleep(.5);
+    }
+    drive.SetDrivePercent(25);
+
+    drive.Forward(7);
+    */
+
+    drive.TurnTo(270);
+
+    drive.SetDrivePercent(35);
+
+    drive.Forward(2);
+    Sleep(.5);
+    for (int i = 0; i < 8; i++) {
+        drive.Forward(.4);
+        Sleep(.5);
+    }
+    
+    drive.Forward(2);
+
+
+    drive.SetDrivePercent(25);
+
+    leverServo.SetDegree(50);
+    Sleep(3.0);
+    drive.Forward(4);
 }
 
 /**
  * to be called from the bottom of the left ramp facing south. Completes the lever task.
  * End Position: same place as start.
-*/
-int levers() {
-
-    drive.Forward(3);
-
-    // Put arm up
-    leverServo.SetDegree(60);
+ */
+void Levers()
+{
 
     // Drive up to the lever
+    drive.Back(1);
+    // Put arm up
+    leverServo.SetDegree(100);
+    Sleep(2.0);
     drive.Forward(3);
-    
+
     // Drop arm down
     leverServo.SetDegree(20);
 
@@ -182,51 +234,63 @@ int levers() {
 
     // Drive back forward, and lift the arm
     drive.Forward(3);
-    leverServo.SetDegree(60);
+    leverServo.SetDegree(100);
+    Sleep(1.0);
+    
+    
 
     // Drive back and lower the servo.
-    drive.Back(3);
     leverServo.SetDegree(15);
+    drive.Back(3);
+    
 }
 
 /**
  * to be called from the bottom of the left ramp facing south. Completes the final button task.
  * End Position: at the final button
-*/
-int finalButton() {
+ */
+void FinalButton()
+{
 
     drive.Forward(1.5);
 
     // face the button
-    drive.TurnLeft(65);
+    drive.TurnLeft(60);
 
     // drive into it
-    drive.Forward(25);
+    drive.ForwardTimed(15.0);
 }
 
-int main(void) {
+/* Waits until robot reads a value from the starting light */
+void WaitToStart()
+{
+    LCD.Write("Waiting to start");
+    while (cds.Value() > 0.6)
+    {
+    }
+}
 
-    //sets servo values
+int main(void)
+{
+
+    drive.initialize();
+
+    // sets servo values
     leverServo.SetMin(SERVO_MIN);
     leverServo.SetMax(SERVO_MAX);
 
+    Position lightCoordinates = GetCoordinate();
 
-    LCD.Write("Waiting to start");
-    /* Waits until robot reads a value from the starting light */
-    while (cds.Value() > 0.6) {
-        
-    }
-    
+    WaitToStart();
+
     LCD.Clear();
 
-    ticket();
-    passport();
-    luggage();
-    levers();
-    finalButton();
+    Passport();
+    Ticket(lightCoordinates);
+    Luggage();
+    Levers();
+    FinalButton();
 
-    
     LCD.Clear();
     LCD.Write("Done!");
 }
-
