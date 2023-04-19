@@ -1,296 +1,485 @@
-/********************************/
-/*      Third checkpoint        */
-/*     OSU FEH Spring 2023      */
-/*           Team A             */
-/*          03/30/23            */
-/********************************/
-
-/* Include Preprocessor Directives */
-#include <FEHLCD.h>
-#include <FEHIO.h>
-#include <FEHUtility.h>
 #include <FEHMotor.h>
-#include <FEHServo.h>
-#include <FEHAccel.h>
-#include <FEHBattery.h>
-#include <FEHBuzzer.h>
+#include <FEHIO.h>
 #include <FEHRPS.h>
-#include <FEHSD.h>
-#include <string.h>
-#include <stdio.h>
+#include <FEHUtility.h>
+#include <FEHLCD.h>
 
-#include "Drive.h"
+#include <math.h>
+// #include <algorithm>
 
-FEHServo leverServo(FEHServo::Servo0);
-AnalogInputPin cds(FEHIO::P1_1);
+//*constants for movement
+#define CLICKS_PER_INCH 400.0 / 12.0
+#define CLICKS_PER_DEGREE CLICKS_PER_INCH * 0.065
 
-// SERVO VALUES
-#define SERVO_MAX 2500
-#define SERVO_MIN 550
+#define DEFAULT_DRIVE_POWER 25
+#define DEFAULT_TURN_POWER 20
 
-#define COURSE_Y 72
-#define LIGHT_COORDINATES {13.3, 60.0}
+//* constants for RPS
+#define RPS_ANGLE_ERROR 1 // angle error in degrees
+#define RPS_DIST_ERROR 1  // distance error in inches
+#define CDS_CELL_DISP 0//3.5
 
-#define LEFTRAMP_COORDINATES \
-    {                     \
-        7, 45          \
-    }
-
-Drive drive(FEHMotor::Motor0, FEHMotor::Motor1, FEHIO::P0_0, FEHIO::P0_1);
-
-
-
-Position GetCoordinate(){
-    LCD.Clear();
-    LCD.WriteLine("Getting point");
-    //Sleep(5000);
-    Position point = drive.GetPosition();
-    LCD.WriteLine("Point registered");
-    //Sleep(5000);
-    return point;
-}
-bool lightIsRed(){
-    return (cds.Value() < 0.7);
-}
-/**
- * to be called from the start position. Completes the ticket task.
- * End Position: backed up against passport wall.
- */
-void Ticket(Position lightCoordinates)
+struct Position
 {
-    // Turn left to face the light
-    //Position light = LIGHT_COORDINATES;
-    drive.GoToWithCorrection(lightCoordinates);
+    float x;
+    float y;
+    float heading;
+};
 
-    // Drive on top of the light
-    // drive.Forward(24);
-
-    LCD.Clear();
-    Sleep(2.0);
-    bool isRed = lightIsRed();
-    drive.TurnTo(135);
-    if(isRed)
-    {
-        LCD.Write("THE COLOR IS RED");
-        /* Touch the button */
-        drive.TurnLeft(45);
-
-        // drive to the button
-        drive.Back(9.5);
-
-        // Face the button
-        drive.TurnLeft(90);
-    }
-    else
-    {
-        LCD.Write("THE COLOR IS BLUE");
-        /* Touch the button */
-        drive.TurnLeft(45);
-
-        // drive to the button
-        drive.Back(5);
-
-        // Face the button
-        drive.TurnLeft(90);
-    }
-    // Actually press the button
-    drive.BackTimed(2);
-    drive.Wiggle();
-    drive.BackTimed(1);
-    
-}
-
-/**
- * to be called from the passport wall. Completes the passport task.
- * End Position: aligned with the passport task, facing west.
- */
-void Passport()
-{   
-    /* Moves forward to position */
-    drive.Forward(2);
-    //lever up
-    leverServo.SetDegree(75);
-    /* Turns right to position */
-    drive.TurnRight(90);
-    /* Moves forward to position */
-    drive.Forward(4);
-    /* Turns left to position, facing right-most ramp */
-    drive.TurnTo(90);
-    /* Moves forward up the ramp, stopping in front of the passport mechanism */
-    drive.SetDrivePercent(50);
-    drive.Forward(30);
-    drive.SetDrivePercent(25);
-
-    leverServo.SetDegree(15);
-
-    // Back into the passport wall
-    drive.TurnLeft(110);
-    leverServo.SetDegree(15);
-    drive.BackTimed(1.5);
-    drive.Wiggle();
-    drive.BackTimed(0.5);
-
-    /* Moves forward to position, parallel to passport */
-    drive.Forward(7.8);
-    /* Turns right to face passport, bar aligned with lever */
-    drive.TurnRight(90);
-    /* Move bar up while moving forward slowly until lever reaches top */
-    drive.Forward(1);
-    /* Moves bar up */
-    leverServo.SetDegree(90);
-    //move into the passport
-    drive.ForwardTimed(1.0);
-    // move bar down
-    drive.Back(4);
-    leverServo.SetDegree(15);
-    /* Move backward a little */
-    
-}
-
-/**
- * to be called from being aligned with the passport task. Completes the luggage task.
- * End Position: at the bottom of the left ramp, facing south.
- */
-void Luggage()
+class Drive
 {
-    drive.ForwardTimed(6.5);
-    drive.Back(1);
-    drive.TurnLeft(90);
-    drive.BackTimed(5);
-    drive.Wiggle();
-    drive.Forward(1);
-    Position leftRamp = LEFTRAMP_COORDINATES;
-    drive.GoToWithCorrection(leftRamp);
+private:
+    FEHMotor leftMotor;
+    FEHMotor rightMotor;
 
-    /*
-    drive.TurnTo(260);
-    //drive.TurnTo(270);
+    int drivePower = DEFAULT_DRIVE_POWER;
+    int turnPower = DEFAULT_TURN_POWER;
 
-    drive.SetDrivePercent(70);
-    drive.Forward(2);
-    drive.SetDrivePercent(25);    
-    Sleep(2);
-    
-    //----
-    //whack the luggage
-    drive.SetDrivePercent(70);
-    drive.ForwardTimed(0.2);
-    drive.SetDrivePercent(25);
-     //----
-    
-    drive.SetDrivePercent(70);
-    for (int i = 0; i < 5; i++) {
-        drive.Forward(0.6);
-        Sleep(.5);
-    }
-    drive.SetDrivePercent(25);
+    DigitalEncoder leftEncoder;
+    DigitalEncoder rightEncoder;
 
-    drive.Forward(7);
+    /**
+     * Resets encoder counts
     */
-
-    drive.TurnTo(270);
-
-    drive.SetDrivePercent(35);
-
-    drive.Forward(2);
-    Sleep(.5);
-    for (int i = 0; i < 8; i++) {
-        drive.Forward(.4);
-        Sleep(.5);
+    void ResetEncoderCounts()
+    {
+        leftEncoder.ResetCounts();
+        rightEncoder.ResetCounts();
     }
-    
-    drive.Forward(2);
 
+    /**
+     * Stops both motors
+    */
+    void Stop()
+    {
+        leftMotor.Stop();
+        rightMotor.Stop();
+    }
 
-    drive.SetDrivePercent(25);
+    //*MATH HELPER FUNCTIONS
 
-    leverServo.SetDegree(50);
-    Sleep(3.0);
-    drive.Forward(4);
-}
+    /**
+     * Converts radians to degrees
+    */
+    float radiansToDegrees(float radians)
+    {
+        float degrees = radians * (180.0 / M_PI);
+        return degrees;
+    }
 
-/**
- * to be called from the bottom of the left ramp facing south. Completes the lever task.
- * End Position: same place as start.
+    /**
+     * Calculate the positive or negative difference between the angles with the smallest
+     * absolute value (to find out which direction the robot should turn)
+     * Positive for clockwise and negative for counterclockwise
+     */
+    float CalcSmallestAngleDifference(float desired, float current)
+    {
+        float diff = desired - current;
+        if (diff > 180)
+        {
+            diff -= 360;
+        }
+        else if (diff < -180)
+        {
+            diff += 360;
+        }
+        return diff;
+    }
+
+    /**
+     * get the angle from 0 to 360 deg based on the difference between
+     * the x coordinates and the difference between the y coordinates
+     */
+    float GetAngleFromDeltas(float deltaX, float deltaY)
+    {
+
+        // arctan ∆y/∆x
+        float angle = radiansToDegrees(atan2f(deltaY, deltaX));
+
+        return angle < 0 ? angle + 360 : angle;
+    }
+
+    /**
+     * Angle difference based on a desired and a current coordinate point
+    */
+    float GetAngleFromPoints(Position desired, Position current){
+        float deltaX = desired.x - current.x;
+        float deltaY = desired.y - current.y;
+
+        // desired angle from 0 to 360
+        float desiredAngle = GetAngleFromDeltas(deltaX, deltaY);
+
+        /*
+        LCD.Write("Desired angle");
+        LCD.WriteLine(desiredAngle);
+        LCD.Write("Current angle");
+        LCD.WriteLine(current.heading);
+        */
+
+        // shortest angle the robot needs to turn
+        float angleDiff = CalcSmallestAngleDifference(desiredAngle, current.heading);        
+/* 
+        LCD.Write("Angle diff: ");
+        LCD.WriteLine(angleDiff);
  */
-void Levers()
-{
+        return angleDiff;
+    }
 
-    // Drive up to the lever
-    drive.Back(1);
-    // Put arm up
-    leverServo.SetDegree(100);
-    Sleep(2.0);
-    drive.Forward(3);
+    /**
+     * Returns the distance between points in the coordinate plane
+    */
+    float Dist(Position p1, Position p2)
+    {
+        double dx = p1.x - p2.x;
+        double dy = p1.y - p2.y;
+        return hypot(dx, dy);
+    }
 
-    // Drop arm down
-    leverServo.SetDegree(20);
-
-    // Drive back
-    drive.Back(3);
-
-    // Wait the required time.
-    Sleep(5.0);
-
-    // Drive back forward, and lift the arm
-    drive.Forward(3);
-    leverServo.SetDegree(100);
-    Sleep(1.0);
-    
-    
-
-    // Drive back and lower the servo.
-    leverServo.SetDegree(15);
-    drive.Back(3);
-    
-}
-
-/**
- * to be called from the bottom of the left ramp facing south. Completes the final button task.
- * End Position: at the final button
- */
-void FinalButton()
-{
-
-    drive.Forward(1.5);
-
-    // face the button
-    drive.TurnLeft(60);
-
-    // drive into it
-    drive.ForwardTimed(15.0);
-}
-
-/* Waits until robot reads a value from the starting light */
-void WaitToStart()
-{
-    LCD.Write("Waiting to start");
-    while (cds.Value() > 0.6)
+public:
+    Drive(FEHMotor::FEHMotorPort leftPort, FEHMotor::FEHMotorPort rightPort, FEHIO::FEHIOPin leftEncoderPort, FEHIO::FEHIOPin rightEncoderPort) : leftMotor(leftPort, 9),
+                                                                                                                                                  rightMotor(rightPort, 9),
+                                                                                                                                                  leftEncoder(leftEncoderPort),
+                                                                                                                                                  rightEncoder(rightEncoderPort)
     {
     }
-}
+    void initialize(){
+        ResetEncoderCounts();
+        RPS.InitializeTouchMenu();
+        LCD.Clear();
+        LCD.WriteLine("Initialization complete");
+    }
+    /**
+     * Just turns the motors on forward wthout stopping
+     */
+    void Forward()
+    {
+        leftMotor.SetPercent(drivePower);
+        rightMotor.SetPercent(-drivePower);
+    }
+    /**
+     * Drives forward for a certain amount of inches
+     * Method overload
+     */
+    void Forward(int inches)
+    {
+        ResetEncoderCounts();
 
-int main(void)
-{
+        Forward();
 
-    drive.initialize();
+        int clicks = (int)(CLICKS_PER_INCH * inches);
 
-    // sets servo values
-    leverServo.SetMin(SERVO_MIN);
-    leverServo.SetMax(SERVO_MAX);
+        while (leftEncoder.Counts() <= clicks && rightEncoder.Counts() <= clicks);
 
-    Position lightCoordinates = GetCoordinate();
+        Stop();
+    }
 
-    WaitToStart();
+    /**
+     * Moves the robot forward for a defined amount of time
+    */
+    void ForwardTimed(float time) {
+        float tNow = TimeNow();
 
-    LCD.Clear();
+        Forward();
 
-    Passport();
-    Ticket(lightCoordinates);
-    Luggage();
-    Levers();
-    FinalButton();
+        while(TimeNow()-tNow<time);
 
-    LCD.Clear();
-    LCD.Write("Done!");
-}
+        Stop();
+    }
+
+    /**
+     * Wiggles the robot back and force to help square against walls.
+     */
+    void Wiggle() {
+        TurnLeft(5);
+        TurnRight(5);
+        TurnLeft(5);
+        TurnRight(5);
+    }
+
+    /**
+     * Just turns the motors on forward wthout stopping
+     */
+    void Back(){
+        leftMotor.SetPercent(-drivePower);
+        rightMotor.SetPercent(drivePower);
+    }
+
+    /**
+     * Drives back for a certain amount of inches
+     * Method overload
+     */
+    void Back(int inches)
+    {
+        ResetEncoderCounts();
+
+        Back();
+
+        int clicks = (int)(CLICKS_PER_INCH * inches);
+
+        while (leftEncoder.Counts() <= clicks && rightEncoder.Counts() <= clicks);
+
+        Stop();
+    }
+
+    /**
+     * Moves the robot forward for a defined amount of time
+    */
+    void BackTimed(float time) {
+        float t_now;
+        t_now = TimeNow();
+
+        Back();
+
+        while(TimeNow()-t_now<time);
+
+        Stop();
+    }
+
+    /**
+     * Turns right a defined amount of degrees
+    */
+    void TurnRight(int degrees)
+    {
+
+        degrees *= 0.8;
+    
+        ResetEncoderCounts();
+        leftMotor.SetPercent(turnPower);
+        rightMotor.SetPercent(turnPower);
+
+        int clicks = (int)(CLICKS_PER_DEGREE * degrees);
+
+        while (leftEncoder.Counts() <= clicks && rightEncoder.Counts() <= clicks);
+
+        Stop();
+    }
+
+    void TurnLeft(int degrees)
+    {
+
+        ResetEncoderCounts();
+        leftMotor.SetPercent(-turnPower);
+        rightMotor.SetPercent(-turnPower);
+
+        int clicks = (int)(CLICKS_PER_DEGREE * degrees);
+
+        while (leftEncoder.Counts() <= clicks && rightEncoder.Counts() <= clicks);
+
+        Stop();
+    }
+
+    /**
+     * Turns the robot a certain angle
+     * @param angle positive for counterclockwise and negative for clockwise
+    */
+    void Turn(float angle)
+    {
+        angle *= .6;
+
+        if (angle > 0)
+        {
+            TurnLeft(angle);
+        }
+        else
+        {
+            TurnRight(abs(angle));
+        }
+    }
+
+    /**
+     * Updates drivePower
+    */
+    void SetDrivePercent(int percent)
+    {
+        drivePower = percent;
+    }
+
+    /**
+     * Updates turnPower
+    */
+    void SetTurnPercent(int percent)
+    {
+        turnPower = percent;
+    }
+
+    /**
+     * Gets the current x and y coordinates and heading
+     */
+    Position GetPosition()
+    {
+
+        // vars for the current position in the rps
+        float currX;
+        float currY;
+        float currHeading;
+
+        // set the vars when RPS returns valid values
+        do
+        {
+            Sleep(20);
+            currX = RPS.X();
+            currY = RPS.Y();
+            currHeading = RPS.Heading();
+            LCD.Clear();
+            LCD.WriteLine("Waiting for signal");
+            LCD.Write("x: ");
+            LCD.WriteLine(currX);
+            LCD.Write("y: ");
+            LCD.WriteLine(currY);
+            LCD.Write("heading: ");
+            LCD.WriteLine(currHeading);
+        } while (currX < 0 || currY < 0 || currHeading < 0);
+
+        return {
+            currX,
+            currY,
+            currHeading};
+    }
+
+    /**
+     * Checks RPS info for testing
+    */
+    void checkInfo(Position desired)
+    {
+
+        LCD.Clear();
+        // vars for the current position in the rps
+        Position currPos = GetPosition();
+
+        float angleDiff = GetAngleFromPoints(desired, currPos);
+        
+    }
+
+    /**
+     * Turns the robot towards the desired point
+     *
+     * @param desired coordinates of the point you want to go to
+     */
+    void TurnTo(Position desired)
+    {
+        LCD.Clear();
+        // vars for the current position in the rps
+        Position currPos = GetPosition();
+
+        float angleDiff = GetAngleFromPoints(desired, currPos);
+
+        // if the difference is close enough the robots stops turning (base case)
+        if (abs(angleDiff) < RPS_ANGLE_ERROR)
+        {
+            return;
+        }
+
+        // robot turns the shortest way towards the desired angle
+        Turn(angleDiff);
+
+        // recursive call
+        TurnTo(desired);
+    }
+
+    void TurnTo(float desiredHeading){
+        Position currPos = GetPosition();
+        float currHeading = currPos.heading;
+
+        float angleDiff = CalcSmallestAngleDifference(desiredHeading, currHeading);
+
+        // if the difference is close enough the robots stops turning (base case)
+        if (abs(angleDiff) < RPS_ANGLE_ERROR)
+        {
+            return;
+        }
+
+        // robot turns the shortest way towards the desired angle
+        Turn(angleDiff);
+
+        // recursive call
+        TurnTo(desiredHeading);
+
+    }
+
+    /**
+     * Drive the robot in a Forward line to the desired point
+     *
+     * @param desired coordinate of the point you want to go to
+     *
+     * @requires robot to be turned towards the point
+     */
+    void DriveTo(Position desired)
+    {
+        Position currPos = GetPosition();
+        float dist = Dist(currPos, desired) - CDS_CELL_DISP;
+        Forward(dist);
+    }
+
+    void GoTo(Position desired)
+    {
+        TurnTo(desired);
+        DriveTo(desired);
+    }
+
+    /**
+     * Supposed to take a position, turn towards it,
+     * and if it deviates too much from the correct heading, it corrects itself
+     */
+    void GoToWithCorrection(Position desired)
+    {
+
+        // vars for the current position in the rps
+        Position currPos = GetPosition();
+
+        // distance form current position to desired position
+        float dist = Dist(currPos, desired);
+
+        // stop moving when close enough (base case)
+        if (dist < RPS_DIST_ERROR)
+        {
+            Stop();
+            return;
+        }
+
+        float angleDiff = GetAngleFromPoints(desired, currPos);
+
+        // turns only if the angle difference is too big
+        if (abs(angleDiff) < RPS_ANGLE_ERROR)
+        {
+            // drive Forward if the angle is correct
+            if(dist > 3){
+                Forward(dist * 0.5);
+            } else {
+                Forward(dist);
+            }
+        }
+        else
+        {
+            // robot turns to a different direction based on which is faster
+            Turn(angleDiff);
+        }
+
+        // make recursive call
+        GoToWithCorrection(desired);
+    }
+
+    void goToWithCorrection2(Position desired){
+
+        while(true){
+            // vars for the current position in the rps
+            Position currPos = GetPosition();
+
+            // distance form current position to desired position
+            float dist = Dist(currPos, desired);
+
+            if(dist < RPS_DIST_ERROR){
+                Stop();
+                return;
+            }
+
+            float angleDiff = GetAngleFromPoints(desired, currPos);
+            if(angleDiff > RPS_ANGLE_ERROR){
+                Stop();
+                Turn(angleDiff);
+            }
+
+            Forward();
+        }
+    }
+};
+
