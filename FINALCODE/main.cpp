@@ -36,6 +36,11 @@ AnalogInputPin cds(FEHIO::P1_1);
         7, 45          \
     }
 
+#define FINALBUTTON_COORDINATES \
+    {                     \
+        32, 0          \
+    }
+
 Drive drive(FEHMotor::Motor0, FEHMotor::Motor1, FEHIO::P0_0, FEHIO::P0_1);
 
 
@@ -49,8 +54,9 @@ Position GetCoordinate(){
     //Sleep(5000);
     return point;
 }
+
 bool lightIsRed(){
-    return (cds.Value() < 0.7);
+    return (cds.Value() < 0.6);
 }
 /**
  * to be called from the start position. Completes the ticket task.
@@ -66,9 +72,10 @@ void Ticket(Position lightCoordinates)
     // drive.Forward(24);
 
     LCD.Clear();
+    drive.TurnTo(135);
     Sleep(2.0);
     bool isRed = lightIsRed();
-    drive.TurnTo(135);
+    
     if(isRed)
     {
         LCD.Write("THE COLOR IS RED");
@@ -76,7 +83,7 @@ void Ticket(Position lightCoordinates)
         drive.TurnLeft(45);
 
         // drive to the button
-        drive.Back(9.5);
+        drive.Back(8.5);
 
         // Face the button
         drive.TurnLeft(90);
@@ -131,20 +138,55 @@ void Passport()
     drive.Wiggle();
     drive.BackTimed(0.5);
 
+    // /* Moves forward to position, parallel to passport */
+    // drive.Forward(8.2);
+    // /* Turns right to face passport, bar aligned with lever */
+    // drive.TurnRight(93);
+    // /* Move bar up while moving forward slowly until lever reaches top */
+    // drive.Forward(1);
+    // /* Moves bar up */
+    // leverServo.SetDegree(90);
+    // //move into the passport
+    // drive.ForwardTimed(1.5);
+    // // move bar down
+    // leverServo.SetDegree(15);
+    // drive.Back(4);
+
+    if (RPS.GetCorrectLever() == 0) { // LEVER A, GET UNDER A LITTLE THEN FLIP VIOLENT
+        /* Moves forward to position, parallel to passport */
+        drive.Forward(8.2);
+        /* Turns right to face passport, bar aligned with lever */
+        drive.TurnRight(93);
+        /* Move bar up while moving forward slowly until lever reaches top */
+        drive.Forward(1);
+        /* Moves bar up */
+        leverServo.SetDegree(30);
+        //move into the passport
+        drive.Forward(1.5);
+        Sleep(.5);
+        leverServo.SetDegree(180);
+        Sleep(1.5);
+        drive.Back(4);
+        // move bar down
+        leverServo.SetDegree(15);
+        
+        return;
+    }
+
     /* Moves forward to position, parallel to passport */
-    drive.Forward(7.8);
+    drive.Forward(8.2);
     /* Turns right to face passport, bar aligned with lever */
     drive.TurnRight(93);
     /* Move bar up while moving forward slowly until lever reaches top */
-    drive.Forward(1);
+    drive.Forward(1.5);
     /* Moves bar up */
-    leverServo.SetDegree(80);
+    leverServo.SetDegree(180);
     //move into the passport
-    drive.ForwardTimed(1.5);
+    Sleep(1.5);
     // move bar down
     drive.Back(4);
     leverServo.SetDegree(15);
-    
+        
 }
 
 /**
@@ -156,8 +198,10 @@ void Luggage()
     leverServo.SetDegree(120);
     drive.ForwardTimed(6.5);
     drive.Back(6);
-    drive.TurnTo(0);
-    drive.BackTimed(5);
+    drive.TurnTo(355);
+    drive.SetDrivePercent(50);
+    drive.BackTimed(3);
+    drive.SetDrivePercent(25);
     drive.Wiggle();
     drive.BackTimed(1);
     drive.Forward(5);
@@ -165,47 +209,21 @@ void Luggage()
     Position leftRamp = LEFTRAMP_COORDINATES;
     drive.GoToNoTurn(leftRamp);
 
-    /*
-    drive.TurnTo(260);
-    //drive.TurnTo(270);
-
-    drive.SetDrivePercent(70);
-    drive.Forward(2);
-    drive.SetDrivePercent(25);    
-    Sleep(2);
-    
-    //----
-    //whack the luggage
-    drive.SetDrivePercent(70);
-    drive.ForwardTimed(0.2);
-    drive.SetDrivePercent(25);
-     //----
-    
-    drive.SetDrivePercent(70);
-    for (int i = 0; i < 5; i++) {
-        drive.Forward(0.6);
-        Sleep(.5);
-    }
-    drive.SetDrivePercent(25);
-
-    drive.Forward(7);
-    */
-
     drive.SetDrivePercent(35);
 
-    drive.Forward(3);
+    drive.Forward(2.5);
     Sleep(.5);
     for (int i = 0; i < 5; i++) {
-        drive.Forward(1.1);
+        drive.Forward(1.6);
         Sleep(.5);
-        drive.Back(.5);
+        drive.Back(1);
         Sleep(.5);
     }
     
 
     drive.SetDrivePercent(25);
 
-    drive.Forward(2);
+    drive.Forward(4.5);
 }
 
 /**
@@ -215,9 +233,18 @@ void Luggage()
 void Levers()
 {
 
-    // Drive to lever
-    //drive.Forward(2);
-    drive.TurnLeft(3);
+    drive.TurnLeft(90);
+    drive.BackTimed(3);
+    drive.Wiggle();
+    drive.BackTimed(1);
+    drive.Forward(5);
+
+    // Drive to the correct lever
+    drive.Forward((2 - RPS.GetCorrectLever()) * 3.5);
+    drive.TurnRight(90);
+    drive.Back(1);
+
+    
 
     // Drop arm down
     leverServo.SetDegree(20);
@@ -230,6 +257,7 @@ void Levers()
 
     // Drive back forward, and lift the arm
     drive.Forward(3);
+    drive.TurnLeft(4.5);
     leverServo.SetDegree(100);
     Sleep(1.0);
     
@@ -251,10 +279,11 @@ void FinalButton()
     drive.Forward(1.5);
 
     // face the button
-    drive.TurnLeft(65);
+    Position finalButton = FINALBUTTON_COORDINATES;
+    drive.TurnTo(finalButton);
 
     // drive half way
-    drive.ForwardTimed(2.0);
+    drive.ForwardTimed(1.5);
 
     // 180
     drive.TurnLeft(175);
