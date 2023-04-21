@@ -11,8 +11,9 @@
 #define CLICKS_PER_INCH 400.0 / 12.0
 #define CLICKS_PER_DEGREE CLICKS_PER_INCH * 0.065
 
-#define DEFAULT_DRIVE_POWER 25
-#define DEFAULT_TURN_POWER 20
+#define DEFAULT_DRIVE_POWER 35
+#define DEFAULT_TURN_POWER 30
+#define RPS_TURN_POWER 15
 
 //* constants for RPS
 #define RPS_ANGLE_ERROR .5 // angle error in degrees
@@ -177,13 +178,14 @@ public:
      * Moves the robot forward for a defined amount of time
     */
     void ForwardTimed(float time) {
+        SetDrivePercent(25);
         float tNow = TimeNow();
 
         Forward();
 
         while(TimeNow()-tNow<time);
-
         Stop();
+        SetDrivePercent(25);
     }
 
     /**
@@ -225,14 +227,15 @@ public:
      * Moves the robot forward for a defined amount of time
     */
     void BackTimed(float time) {
+        SetDrivePercent(25);
         float t_now;
         t_now = TimeNow();
 
         Back();
 
         while(TimeNow()-t_now<time);
-
         Stop();
+        SetDrivePercent(25);
     }
 
     /**
@@ -357,6 +360,7 @@ public:
      */
     void TurnTo(Position desired)
     {
+        SetTurnPercent(RPS_TURN_POWER);
         LCD.Clear();
         // vars for the current position in the rps
         Position currPos = GetPosition();
@@ -366,6 +370,7 @@ public:
         // if the difference is close enough the robots stops turning (base case)
         if (abs(angleDiff) < RPS_ANGLE_ERROR)
         {
+            SetTurnPercent(DEFAULT_TURN_POWER);
             return;
         }
 
@@ -377,6 +382,7 @@ public:
     }
 
     void TurnTo(float desiredHeading){
+        SetTurnPercent(RPS_TURN_POWER);
         Position currPos = GetPosition();
         float currHeading = currPos.heading;
 
@@ -385,6 +391,7 @@ public:
         // if the difference is close enough the robots stops turning (base case)
         if (abs(angleDiff) < RPS_ANGLE_ERROR)
         {
+            SetTurnPercent(DEFAULT_TURN_POWER);
             return;
         }
 
@@ -426,7 +433,7 @@ public:
      */
     void GoToWithCorrection(Position desired)
     {
-
+        SetTurnPercent(RPS_TURN_POWER);
         // vars for the current position in the rps
         Position currPos = GetPosition();
 
@@ -437,6 +444,7 @@ public:
         if (dist < RPS_DIST_ERROR)
         {
             Stop();
+            SetTurnPercent(DEFAULT_TURN_POWER);
             return;
         }
 
@@ -486,4 +494,3 @@ public:
         }
     }
 };
-
